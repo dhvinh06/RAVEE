@@ -1,3 +1,5 @@
+cloning ravee by Đinh Hồng Vinh, for educational purpose 
+
 # RAVEE
 
 The RAVEE project provides a general approach to extract process-mining-conform event logs from unstructured video data in an unsupervised manner.
