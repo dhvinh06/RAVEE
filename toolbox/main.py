@@ -4,7 +4,7 @@ import subprocess
 import pandas as pd
 import numpy as np
 import time
-from moviepy.video.compositing.concatenate import concatenate_videoclips
+from moviepy.video.compositing.CompositeVideoClip import concatenate_videoclips
 from moviepy.video.io.VideoFileClip import VideoFileClip
 import cv2
 

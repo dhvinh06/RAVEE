@@ -7,67 +7,75 @@
 		<string key="concept:name" value="1" />
 		<event>
 			<int key="videoID" value="1" />
-			<string key="activity" value="a" />
-			<string key="timestamp_start" value="23:5:28" />
-			<string key="concept:name" value="a" />
-			<string key="time:timestamp" value="23:5:28" />
+			<string key="activity" value="prepare" />
+			<date key="timestamp_start" value="0001-01-01T18:04:04+00:00" />
+			<string key="concept:name" value="prepare" />
+			<date key="time:timestamp" value="0001-01-01T18:04:04+00:00" />
 			<int key="@@index" value="0" />
+			<int key="@@case_index" value="0" />
 		</event>
 		<event>
 			<int key="videoID" value="1" />
-			<string key="activity" value="b" />
-			<string key="timestamp_start" value="23:5:34" />
-			<string key="concept:name" value="b" />
-			<string key="time:timestamp" value="23:5:34" />
+			<string key="activity" value="edge crafting" />
+			<date key="timestamp_start" value="0001-01-01T18:04:10+00:00" />
+			<string key="concept:name" value="edge crafting" />
+			<date key="time:timestamp" value="0001-01-01T18:04:10+00:00" />
 			<int key="@@index" value="1" />
+			<int key="@@case_index" value="0" />
 		</event>
 		<event>
 			<int key="videoID" value="1" />
-			<string key="activity" value="a" />
-			<string key="timestamp_start" value="23:5:40" />
-			<string key="concept:name" value="a" />
-			<string key="time:timestamp" value="23:5:40" />
+			<string key="activity" value="edge crafting 2" />
+			<date key="timestamp_start" value="0001-01-01T18:04:16+00:00" />
+			<string key="concept:name" value="edge crafting 2" />
+			<date key="time:timestamp" value="0001-01-01T18:04:16+00:00" />
 			<int key="@@index" value="2" />
+			<int key="@@case_index" value="0" />
 		</event>
 		<event>
 			<int key="videoID" value="1" />
-			<string key="activity" value="c" />
-			<string key="timestamp_start" value="23:5:44" />
-			<string key="concept:name" value="c" />
-			<string key="time:timestamp" value="23:5:44" />
+			<string key="activity" value="edge crafting 3" />
+			<date key="timestamp_start" value="0001-01-01T18:04:20+00:00" />
+			<string key="concept:name" value="edge crafting 3" />
+			<date key="time:timestamp" value="0001-01-01T18:04:20+00:00" />
 			<int key="@@index" value="3" />
+			<int key="@@case_index" value="0" />
 		</event>
 		<event>
 			<int key="videoID" value="1" />
-			<string key="activity" value="d" />
-			<string key="timestamp_start" value="23:5:50" />
-			<string key="concept:name" value="d" />
-			<string key="time:timestamp" value="23:5:50" />
+			<string key="activity" value="balancing" />
+			<date key="timestamp_start" value="0001-01-01T18:04:26+00:00" />
+			<string key="concept:name" value="balancing" />
+			<date key="time:timestamp" value="0001-01-01T18:04:26+00:00" />
 			<int key="@@index" value="4" />
+			<int key="@@case_index" value="0" />
 		</event>
 		<event>
 			<int key="videoID" value="1" />
-			<string key="activity" value="e" />
-			<string key="timestamp_start" value="23:5:54" />
-			<string key="concept:name" value="e" />
-			<string key="time:timestamp" value="23:5:54" />
+			<string key="activity" value="roof crafting" />
+			<date key="timestamp_start" value="0001-01-01T18:04:30+00:00" />
+			<string key="concept:name" value="roof crafting" />
+			<date key="time:timestamp" value="0001-01-01T18:04:30+00:00" />
 			<int key="@@index" value="5" />
+			<int key="@@case_index" value="0" />
 		</event>
 		<event>
 			<int key="videoID" value="1" />
-			<string key="activity" value="f" />
-			<string key="timestamp_start" value="23:5:59" />
-			<string key="concept:name" value="f" />
-			<string key="time:timestamp" value="23:5:59" />
+			<string key="activity" value="roof finishing" />
+			<date key="timestamp_start" value="0001-01-01T18:04:35+00:00" />
+			<string key="concept:name" value="roof finishing" />
+			<date key="time:timestamp" value="0001-01-01T18:04:35+00:00" />
 			<int key="@@index" value="6" />
+			<int key="@@case_index" value="0" />
 		</event>
 		<event>
 			<int key="videoID" value="1" />
-			<string key="activity" value="g" />
-			<string key="timestamp_start" value="23:6:17" />
-			<string key="concept:name" value="g" />
-			<string key="time:timestamp" value="23:6:17" />
+			<string key="activity" value="finishing" />
+			<date key="timestamp_start" value="0001-01-01T18:04:53+00:00" />
+			<string key="concept:name" value="finishing" />
+			<date key="time:timestamp" value="0001-01-01T18:04:53+00:00" />
 			<int key="@@index" value="7" />
+			<int key="@@case_index" value="0" />
 		</event>
 	</trace>
 </log>

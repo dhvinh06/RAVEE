@@ -1,9 +1,9 @@
-,videoID,activity,timestamp_start,case:concept:name,concept:name,time:timestamp,@@index
-0,1,a,23:5:28,1,a,23:5:28,0
-1,1,b,23:5:34,1,b,23:5:34,1
-2,1,a,23:5:40,1,a,23:5:40,2
-3,1,c,23:5:44,1,c,23:5:44,3
-4,1,d,23:5:50,1,d,23:5:50,4
-5,1,e,23:5:54,1,e,23:5:54,5
-6,1,f,23:5:59,1,f,23:5:59,6
-7,1,g,23:6:17,1,g,23:6:17,7
+,videoID,activity,timestamp_start,case:concept:name,concept:name,time:timestamp,@@index,@@case_index
+0,1,prepare,0001-01-01 18:04:04+00:00,1,prepare,0001-01-01 18:04:04+00:00,0,0
+1,1,edge crafting,0001-01-01 18:04:10+00:00,1,edge crafting,0001-01-01 18:04:10+00:00,1,0
+2,1,edge crafting 2,0001-01-01 18:04:16+00:00,1,edge crafting 2,0001-01-01 18:04:16+00:00,2,0
+3,1,edge crafting 3,0001-01-01 18:04:20+00:00,1,edge crafting 3,0001-01-01 18:04:20+00:00,3,0
+4,1,balancing,0001-01-01 18:04:26+00:00,1,balancing,0001-01-01 18:04:26+00:00,4,0
+5,1,roof crafting,0001-01-01 18:04:30+00:00,1,roof crafting,0001-01-01 18:04:30+00:00,5,0
+6,1,roof finishing,0001-01-01 18:04:35+00:00,1,roof finishing,0001-01-01 18:04:35+00:00,6,0
+7,1,finishing,0001-01-01 18:04:53+00:00,1,finishing,0001-01-01 18:04:53+00:00,7,0
