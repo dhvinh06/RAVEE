@@ -6,6 +6,9 @@ in one Tkinter window with an embedded OpenCV video preview.
 
 import tkinter as tk
 from tkinter import ttk, messagebox
+from queue import Queue, Empty
+from threading import Thread
+from label_suggester import suggest_activity  # RAVEE_LABEL_SUGGESTER_INTEGRATED
 
 import cv2
 from PIL import Image, ImageTk
@@ -245,6 +248,9 @@ def label_video_clusters(video_path, segments):
     previous_button.grid(row=0, column=0, sticky="ew", padx=(0, 4))
     play_button = ttk.Button(navigation, text="Play")
     play_button.grid(row=0, column=1, sticky="ew", padx=(4, 0))
+    navigation.columnconfigure(2, weight=1)
+    suggest_button = ttk.Button(navigation, text="Suggest label")
+    suggest_button.grid(row=0, column=2, sticky="ew", padx=(4, 0))
 
     ttk.Label(side, text="Segment overview", font=("Segoe UI", 10, "bold")).grid(row=8, column=0, sticky="w", pady=(0, 5))
     tree = ttk.Treeview(
@@ -267,6 +273,11 @@ def label_video_clusters(video_path, segments):
     tree.configure(yscrollcommand=tree_scroll.set)
     tree_scroll.grid(row=9, column=1, sticky="ns")
 
+    suggestion_text = tk.StringVar(value="Click Suggest label for an AI suggestion.")
+    ttk.Label(side, textvariable=suggestion_text, wraplength=260).grid(
+        row=10, column=0, sticky="w", pady=(6, 0)
+    )
+
     footer = ttk.Frame(root, padding=(14, 0, 14, 12))
     footer.grid(row=2, column=0, sticky="ew")
     footer.columnconfigure(0, weight=1)
@@ -277,6 +288,9 @@ def label_video_clusters(video_path, segments):
     current_frame = int(segments[0]["start_frame"])
     playing = False
     after_id = None
+    suggestions = {}  # segment index -> proposed text (not committed)
+    suggestion_queue = Queue()
+    pending_suggestion = None
 
     def segment_at(index):
         return segments[index]
@@ -402,6 +416,68 @@ def label_video_clusters(video_path, segments):
     def save_current_draft():
         drafts[current_index] = label_entry.get().strip()
 
+    def update_suggestion_ui():
+        if pending_suggestion is not None:
+            suggest_button.configure(text="Suggesting...", state="disabled")
+            suggestion_text.set(
+                "Analyzing this segment..." if pending_suggestion == current_index
+                else "AI is analyzing another segment..."
+            )
+        elif current_index in suggestions:
+            suggest_button.configure(text="Use suggestion", state="normal")
+            suggestion_text.set(f"AI suggestion: {suggestions[current_index]}")
+        else:
+            suggest_button.configure(text="Suggest label", state="normal")
+            suggestion_text.set("Click Suggest label to generate a suggestion.")
+
+    def request_suggestion():
+        nonlocal pending_suggestion
+        index = current_index
+        if index in suggestions:
+            # The user explicitly chooses to put the suggestion in the entry;
+            # Commit & Next remains the only action that stores a LABEL.
+            label_entry.delete(0, "end")
+            label_entry.insert(0, suggestions[index])
+            save_current_draft()
+            update_progress_and_tree()
+            label_entry.focus_set()
+            suggestion_text.set("Suggestion inserted. Review and click Commit & Next.")
+            return
+        if pending_suggestion is not None:
+            return
+
+        pending_suggestion = index
+        update_suggestion_ui()
+        segment = segment_at(index)
+
+        def worker():
+            try:
+                label = suggest_activity(
+                    video_path, segment["start_frame"], segment["end_frame"]
+                )
+                suggestion_queue.put((index, label, None))
+            except Exception as exc:
+                suggestion_queue.put((index, None, str(exc)))
+
+        Thread(target=worker, daemon=True).start()
+
+    def poll_suggestions():
+        nonlocal pending_suggestion
+        try:
+            while True:
+                index, label, error = suggestion_queue.get_nowait()
+                pending_suggestion = None
+                if label:
+                    suggestions[index] = label
+                update_suggestion_ui()
+                if error and index == current_index:
+                    suggestion_text.set(
+                        "AI unavailable; manual labeling still works. " + error[:160]
+                    )
+        except Empty:
+            pass
+        root.after(150, poll_suggestions)
+
     def go_to_segment(index):
         nonlocal current_index
         if index < 0 or index >= len(segments):
@@ -424,6 +500,7 @@ def label_video_clusters(video_path, segments):
         tree.see(str(current_index))
         show_segment_first_frame()
         update_progress_and_tree()
+        update_suggestion_ui()
         label_entry.focus_set()
 
     def commit_and_next():
@@ -522,6 +599,7 @@ def label_video_clusters(video_path, segments):
 
     previous_button.configure(command=go_previous)
     play_button.configure(command=toggle_playback)
+    suggest_button.configure(command=request_suggestion)
     action_button.configure(command=commit_and_next)
     tree.bind("<Double-1>", on_tree_double_click)
     label_entry.bind("<KeyRelease>", on_entry_change)
@@ -542,6 +620,7 @@ def label_video_clusters(video_path, segments):
 
     root.update_idletasks()
     go_to_segment(0)
+    root.after(150, poll_suggestions)
     root.mainloop()
 
     stop_playback()

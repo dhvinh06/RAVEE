@@ -1,80 +1,215 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <log xes.version="1849-2016" xes.features="nested-attributes" xmlns="http://www.xes-standard.org/">
-	<extension name="Time" prefix="time" uri="http://www.xes-standard.org/time.xesext" />
 	<extension name="Concept" prefix="concept" uri="http://www.xes-standard.org/concept.xesext" />
+	<extension name="Time" prefix="time" uri="http://www.xes-standard.org/time.xesext" />
 	<string key="origin" value="csv" />
 	<trace>
 		<string key="concept:name" value="1" />
 		<event>
 			<int key="videoID" value="1" />
-			<string key="activity" value="prepare" />
-			<date key="timestamp_start" value="0001-01-01T18:04:04+00:00" />
-			<string key="concept:name" value="prepare" />
-			<date key="time:timestamp" value="0001-01-01T18:04:04+00:00" />
+			<string key="activity" value="look down" />
+			<date key="timestamp_start" value="2026-11-14T00:52:03+00:00" />
+			<string key="concept:name" value="look down" />
+			<date key="time:timestamp" value="2026-11-14T00:52:03+00:00" />
 			<int key="@@index" value="0" />
 			<int key="@@case_index" value="0" />
 		</event>
 		<event>
 			<int key="videoID" value="1" />
-			<string key="activity" value="edge crafting" />
-			<date key="timestamp_start" value="0001-01-01T18:04:10+00:00" />
-			<string key="concept:name" value="edge crafting" />
-			<date key="time:timestamp" value="0001-01-01T18:04:10+00:00" />
+			<string key="activity" value="bend down" />
+			<date key="timestamp_start" value="2026-11-14T00:52:05+00:00" />
+			<string key="concept:name" value="bend down" />
+			<date key="time:timestamp" value="2026-11-14T00:52:05+00:00" />
 			<int key="@@index" value="1" />
 			<int key="@@case_index" value="0" />
 		</event>
 		<event>
 			<int key="videoID" value="1" />
-			<string key="activity" value="edge crafting 2" />
-			<date key="timestamp_start" value="0001-01-01T18:04:16+00:00" />
-			<string key="concept:name" value="edge crafting 2" />
-			<date key="time:timestamp" value="0001-01-01T18:04:16+00:00" />
+			<string key="activity" value="crafting the left side" />
+			<date key="timestamp_start" value="2026-11-14T00:52:07+00:00" />
+			<string key="concept:name" value="crafting the left side" />
+			<date key="time:timestamp" value="2026-11-14T00:52:07+00:00" />
 			<int key="@@index" value="2" />
 			<int key="@@case_index" value="0" />
 		</event>
 		<event>
 			<int key="videoID" value="1" />
-			<string key="activity" value="edge crafting 3" />
-			<date key="timestamp_start" value="0001-01-01T18:04:20+00:00" />
-			<string key="concept:name" value="edge crafting 3" />
-			<date key="time:timestamp" value="0001-01-01T18:04:20+00:00" />
+			<string key="activity" value="crafting left side" />
+			<date key="timestamp_start" value="2026-11-14T00:52:09+00:00" />
+			<string key="concept:name" value="crafting left side" />
+			<date key="time:timestamp" value="2026-11-14T00:52:09+00:00" />
 			<int key="@@index" value="3" />
 			<int key="@@case_index" value="0" />
 		</event>
 		<event>
 			<int key="videoID" value="1" />
-			<string key="activity" value="balancing" />
-			<date key="timestamp_start" value="0001-01-01T18:04:26+00:00" />
-			<string key="concept:name" value="balancing" />
-			<date key="time:timestamp" value="0001-01-01T18:04:26+00:00" />
+			<string key="activity" value="pick up right side" />
+			<date key="timestamp_start" value="2026-11-14T00:52:15+00:00" />
+			<string key="concept:name" value="pick up right side" />
+			<date key="time:timestamp" value="2026-11-14T00:52:15+00:00" />
 			<int key="@@index" value="4" />
 			<int key="@@case_index" value="0" />
 		</event>
 		<event>
 			<int key="videoID" value="1" />
-			<string key="activity" value="roof crafting" />
-			<date key="timestamp_start" value="0001-01-01T18:04:30+00:00" />
-			<string key="concept:name" value="roof crafting" />
-			<date key="time:timestamp" value="0001-01-01T18:04:30+00:00" />
+			<string key="activity" value="crafting right side" />
+			<date key="timestamp_start" value="2026-11-14T00:52:19+00:00" />
+			<string key="concept:name" value="crafting right side" />
+			<date key="time:timestamp" value="2026-11-14T00:52:19+00:00" />
 			<int key="@@index" value="5" />
 			<int key="@@case_index" value="0" />
 		</event>
 		<event>
 			<int key="videoID" value="1" />
-			<string key="activity" value="roof finishing" />
-			<date key="timestamp_start" value="0001-01-01T18:04:35+00:00" />
-			<string key="concept:name" value="roof finishing" />
-			<date key="time:timestamp" value="0001-01-01T18:04:35+00:00" />
+			<string key="activity" value="finishing right side then go back to a neutral position" />
+			<date key="timestamp_start" value="2026-11-14T00:52:21+00:00" />
+			<string key="concept:name" value="finishing right side then go back to a neutral position" />
+			<date key="time:timestamp" value="2026-11-14T00:52:21+00:00" />
 			<int key="@@index" value="6" />
 			<int key="@@case_index" value="0" />
 		</event>
 		<event>
 			<int key="videoID" value="1" />
-			<string key="activity" value="finishing" />
-			<date key="timestamp_start" value="0001-01-01T18:04:53+00:00" />
-			<string key="concept:name" value="finishing" />
-			<date key="time:timestamp" value="0001-01-01T18:04:53+00:00" />
+			<string key="activity" value="pick up the behind" />
+			<date key="timestamp_start" value="2026-11-14T00:52:23+00:00" />
+			<string key="concept:name" value="pick up the behind" />
+			<date key="time:timestamp" value="2026-11-14T00:52:23+00:00" />
 			<int key="@@index" value="7" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<string key="activity" value="crafting the behind" />
+			<date key="timestamp_start" value="2026-11-14T00:52:25+00:00" />
+			<string key="concept:name" value="crafting the behind" />
+			<date key="time:timestamp" value="2026-11-14T00:52:25+00:00" />
+			<int key="@@index" value="8" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<string key="activity" value="sliding the behind then pick up the roof" />
+			<date key="timestamp_start" value="2026-11-14T00:52:29+00:00" />
+			<string key="concept:name" value="sliding the behind then pick up the roof" />
+			<date key="time:timestamp" value="2026-11-14T00:52:29+00:00" />
+			<int key="@@index" value="9" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<string key="activity" value="crafting the roof" />
+			<date key="timestamp_start" value="2026-11-14T00:52:34+00:00" />
+			<string key="concept:name" value="crafting the roof" />
+			<date key="time:timestamp" value="2026-11-14T00:52:34+00:00" />
+			<int key="@@index" value="10" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<string key="activity" value="crafting the roof" />
+			<date key="timestamp_start" value="2026-11-14T00:52:37+00:00" />
+			<string key="concept:name" value="crafting the roof" />
+			<date key="time:timestamp" value="2026-11-14T00:52:37+00:00" />
+			<int key="@@index" value="11" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<string key="activity" value="crafting the roof" />
+			<date key="timestamp_start" value="2026-11-14T00:52:39+00:00" />
+			<string key="concept:name" value="crafting the roof" />
+			<date key="time:timestamp" value="2026-11-14T00:52:39+00:00" />
+			<int key="@@index" value="12" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<string key="activity" value="tightening the roof" />
+			<date key="timestamp_start" value="2026-11-14T00:52:41+00:00" />
+			<string key="concept:name" value="tightening the roof" />
+			<date key="time:timestamp" value="2026-11-14T00:52:41+00:00" />
+			<int key="@@index" value="13" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<string key="activity" value="tightening the roof" />
+			<date key="timestamp_start" value="2026-11-14T00:52:43+00:00" />
+			<string key="concept:name" value="tightening the roof" />
+			<date key="time:timestamp" value="2026-11-14T00:52:43+00:00" />
+			<int key="@@index" value="14" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<string key="activity" value="tightening the roof" />
+			<date key="timestamp_start" value="2026-11-14T00:52:44+00:00" />
+			<string key="concept:name" value="tightening the roof" />
+			<date key="time:timestamp" value="2026-11-14T00:52:44+00:00" />
+			<int key="@@index" value="15" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<string key="activity" value="tightening the roof" />
+			<date key="timestamp_start" value="2026-11-14T00:52:45+00:00" />
+			<string key="concept:name" value="tightening the roof" />
+			<date key="time:timestamp" value="2026-11-14T00:52:45+00:00" />
+			<int key="@@index" value="16" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<string key="activity" value="tightening the roof" />
+			<date key="timestamp_start" value="2026-11-14T00:52:48+00:00" />
+			<string key="concept:name" value="tightening the roof" />
+			<date key="time:timestamp" value="2026-11-14T00:52:48+00:00" />
+			<int key="@@index" value="17" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<string key="activity" value="tightening the roof" />
+			<date key="timestamp_start" value="2026-11-14T00:52:50+00:00" />
+			<string key="concept:name" value="tightening the roof" />
+			<date key="time:timestamp" value="2026-11-14T00:52:50+00:00" />
+			<int key="@@index" value="18" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<string key="activity" value="tightening the roof" />
+			<date key="timestamp_start" value="2026-11-14T00:52:52+00:00" />
+			<string key="concept:name" value="tightening the roof" />
+			<date key="time:timestamp" value="2026-11-14T00:52:52+00:00" />
+			<int key="@@index" value="19" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<string key="activity" value="stand up" />
+			<date key="timestamp_start" value="2026-11-14T00:52:53+00:00" />
+			<string key="concept:name" value="stand up" />
+			<date key="time:timestamp" value="2026-11-14T00:52:53+00:00" />
+			<int key="@@index" value="20" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<string key="activity" value="bend down" />
+			<date key="timestamp_start" value="2026-11-14T00:52:55+00:00" />
+			<string key="concept:name" value="bend down" />
+			<date key="time:timestamp" value="2026-11-14T00:52:55+00:00" />
+			<int key="@@index" value="21" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<string key="activity" value="repositioning the box" />
+			<date key="timestamp_start" value="2026-11-14T00:52:56+00:00" />
+			<string key="concept:name" value="repositioning the box" />
+			<date key="time:timestamp" value="2026-11-14T00:52:56+00:00" />
+			<int key="@@index" value="22" />
 			<int key="@@case_index" value="0" />
 		</event>
 	</trace>

@@ -1,9 +1,24 @@
 ,videoID,activity,timestamp_start,case:concept:name,concept:name,time:timestamp,@@index,@@case_index
-0,1,prepare,0001-01-01 18:04:04+00:00,1,prepare,0001-01-01 18:04:04+00:00,0,0
-1,1,edge crafting,0001-01-01 18:04:10+00:00,1,edge crafting,0001-01-01 18:04:10+00:00,1,0
-2,1,edge crafting 2,0001-01-01 18:04:16+00:00,1,edge crafting 2,0001-01-01 18:04:16+00:00,2,0
-3,1,edge crafting 3,0001-01-01 18:04:20+00:00,1,edge crafting 3,0001-01-01 18:04:20+00:00,3,0
-4,1,balancing,0001-01-01 18:04:26+00:00,1,balancing,0001-01-01 18:04:26+00:00,4,0
-5,1,roof crafting,0001-01-01 18:04:30+00:00,1,roof crafting,0001-01-01 18:04:30+00:00,5,0
-6,1,roof finishing,0001-01-01 18:04:35+00:00,1,roof finishing,0001-01-01 18:04:35+00:00,6,0
-7,1,finishing,0001-01-01 18:04:53+00:00,1,finishing,0001-01-01 18:04:53+00:00,7,0
+0,1,look down,2026-11-14 00:52:03+00:00,1,look down,2026-11-14 00:52:03+00:00,0,0
+1,1,bend down,2026-11-14 00:52:05+00:00,1,bend down,2026-11-14 00:52:05+00:00,1,0
+2,1,crafting the left side,2026-11-14 00:52:07+00:00,1,crafting the left side,2026-11-14 00:52:07+00:00,2,0
+3,1,crafting left side,2026-11-14 00:52:09+00:00,1,crafting left side,2026-11-14 00:52:09+00:00,3,0
+4,1,pick up right side,2026-11-14 00:52:15+00:00,1,pick up right side,2026-11-14 00:52:15+00:00,4,0
+5,1,crafting right side,2026-11-14 00:52:19+00:00,1,crafting right side,2026-11-14 00:52:19+00:00,5,0
+6,1,finishing right side then go back to a neutral position,2026-11-14 00:52:21+00:00,1,finishing right side then go back to a neutral position,2026-11-14 00:52:21+00:00,6,0
+7,1,pick up the behind,2026-11-14 00:52:23+00:00,1,pick up the behind,2026-11-14 00:52:23+00:00,7,0
+8,1,crafting the behind,2026-11-14 00:52:25+00:00,1,crafting the behind,2026-11-14 00:52:25+00:00,8,0
+9,1,sliding the behind then pick up the roof,2026-11-14 00:52:29+00:00,1,sliding the behind then pick up the roof,2026-11-14 00:52:29+00:00,9,0
+10,1,crafting the roof,2026-11-14 00:52:34+00:00,1,crafting the roof,2026-11-14 00:52:34+00:00,10,0
+11,1,crafting the roof,2026-11-14 00:52:37+00:00,1,crafting the roof,2026-11-14 00:52:37+00:00,11,0
+12,1,crafting the roof,2026-11-14 00:52:39+00:00,1,crafting the roof,2026-11-14 00:52:39+00:00,12,0
+13,1,tightening the roof,2026-11-14 00:52:41+00:00,1,tightening the roof,2026-11-14 00:52:41+00:00,13,0
+14,1,tightening the roof,2026-11-14 00:52:43+00:00,1,tightening the roof,2026-11-14 00:52:43+00:00,14,0
+15,1,tightening the roof,2026-11-14 00:52:44+00:00,1,tightening the roof,2026-11-14 00:52:44+00:00,15,0
+16,1,tightening the roof,2026-11-14 00:52:45+00:00,1,tightening the roof,2026-11-14 00:52:45+00:00,16,0
+17,1,tightening the roof,2026-11-14 00:52:48+00:00,1,tightening the roof,2026-11-14 00:52:48+00:00,17,0
+18,1,tightening the roof,2026-11-14 00:52:50+00:00,1,tightening the roof,2026-11-14 00:52:50+00:00,18,0
+19,1,tightening the roof,2026-11-14 00:52:52+00:00,1,tightening the roof,2026-11-14 00:52:52+00:00,19,0
+20,1,stand up,2026-11-14 00:52:53+00:00,1,stand up,2026-11-14 00:52:53+00:00,20,0
+21,1,bend down,2026-11-14 00:52:55+00:00,1,bend down,2026-11-14 00:52:55+00:00,21,0
+22,1,repositioning the box,2026-11-14 00:52:56+00:00,1,repositioning the box,2026-11-14 00:52:56+00:00,22,0

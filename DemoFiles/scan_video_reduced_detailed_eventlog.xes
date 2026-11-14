@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<log xes.version="1849-2016" xes.features="nested-attributes" xmlns="http://www.xes-standard.org/">
+	<extension name="Concept" prefix="concept" uri="http://www.xes-standard.org/concept.xesext" />
+	<extension name="Time" prefix="time" uri="http://www.xes-standard.org/time.xesext" />
+	<string key="origin" value="csv" />
+	<trace>
+		<string key="concept:name" value="1" />
+		<event>
+			<int key="videoID" value="1" />
+			<int key="segment_id" value="1" />
+			<int key="cluster_id" value="0" />
+			<string key="activity" value="bendown then crafting the left side board" />
+			<int key="frame_start" value="0" />
+			<int key="frame_end" value="87" />
+			<date key="timestamp_start" value="2026-11-14T15:39:45+00:00" />
+			<date key="timestamp_end" value="2026-11-14T15:39:50.866667+00:00" />
+			<float key="duration_seconds" value="5.866666666666666" />
+			<string key="concept:name" value="bendown then crafting the left side board" />
+			<date key="time:timestamp" value="2026-11-14T15:39:45+00:00" />
+			<int key="@@index" value="0" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<int key="segment_id" value="2" />
+			<int key="cluster_id" value="1" />
+			<string key="activity" value="arranging wooden slats on floor" />
+			<int key="frame_start" value="88" />
+			<int key="frame_end" value="170" />
+			<date key="timestamp_start" value="2026-11-14T15:39:50.866667+00:00" />
+			<date key="timestamp_end" value="2026-11-14T15:39:56.400000+00:00" />
+			<float key="duration_seconds" value="5.533333333333333" />
+			<string key="concept:name" value="arranging wooden slats on floor" />
+			<date key="time:timestamp" value="2026-11-14T15:39:50.866667+00:00" />
+			<int key="@@index" value="1" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<int key="segment_id" value="3" />
+			<int key="cluster_id" value="2" />
+			<string key="activity" value="organizing wooden planks on floor" />
+			<int key="frame_start" value="171" />
+			<int key="frame_end" value="224" />
+			<date key="timestamp_start" value="2026-11-14T15:39:56.400000+00:00" />
+			<date key="timestamp_end" value="2026-11-14T15:40:00+00:00" />
+			<float key="duration_seconds" value="3.6" />
+			<string key="concept:name" value="organizing wooden planks on floor" />
+			<date key="time:timestamp" value="2026-11-14T15:39:56.400000+00:00" />
+			<int key="@@index" value="2" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<int key="segment_id" value="4" />
+			<int key="cluster_id" value="3" />
+			<string key="activity" value="align shelf parts" />
+			<int key="frame_start" value="225" />
+			<int key="frame_end" value="313" />
+			<date key="timestamp_start" value="2026-11-14T15:40:00+00:00" />
+			<date key="timestamp_end" value="2026-11-14T15:40:05.933333+00:00" />
+			<float key="duration_seconds" value="5.933333333333334" />
+			<string key="concept:name" value="align shelf parts" />
+			<date key="time:timestamp" value="2026-11-14T15:40:00+00:00" />
+			<int key="@@index" value="3" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<int key="segment_id" value="5" />
+			<int key="cluster_id" value="1" />
+			<string key="activity" value="adjusting shelf part" />
+			<int key="frame_start" value="314" />
+			<int key="frame_end" value="375" />
+			<date key="timestamp_start" value="2026-11-14T15:40:05.933333+00:00" />
+			<date key="timestamp_end" value="2026-11-14T15:40:10.066667+00:00" />
+			<float key="duration_seconds" value="4.133333333333334" />
+			<string key="concept:name" value="adjusting shelf part" />
+			<date key="time:timestamp" value="2026-11-14T15:40:05.933333+00:00" />
+			<int key="@@index" value="4" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<int key="segment_id" value="6" />
+			<int key="cluster_id" value="3" />
+			<string key="activity" value="adjusting furniture part then pickup the board" />
+			<int key="frame_start" value="376" />
+			<int key="frame_end" value="449" />
+			<date key="timestamp_start" value="2026-11-14T15:40:10.066667+00:00" />
+			<date key="timestamp_end" value="2026-11-14T15:40:15+00:00" />
+			<float key="duration_seconds" value="4.933333333333334" />
+			<string key="concept:name" value="adjusting furniture part then pickup the board" />
+			<date key="time:timestamp" value="2026-11-14T15:40:10.066667+00:00" />
+			<int key="@@index" value="5" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<int key="segment_id" value="7" />
+			<int key="cluster_id" value="1" />
+			<string key="activity" value="assembling white metal stool" />
+			<int key="frame_start" value="450" />
+			<int key="frame_end" value="719" />
+			<date key="timestamp_start" value="2026-11-14T15:40:15+00:00" />
+			<date key="timestamp_end" value="2026-11-14T15:40:33+00:00" />
+			<float key="duration_seconds" value="18.0" />
+			<string key="concept:name" value="assembling white metal stool" />
+			<date key="time:timestamp" value="2026-11-14T15:40:15+00:00" />
+			<int key="@@index" value="6" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<int key="segment_id" value="8" />
+			<int key="cluster_id" value="2" />
+			<string key="activity" value="finishing  adjusting furniture component on floor" />
+			<int key="frame_start" value="720" />
+			<int key="frame_end" value="834" />
+			<date key="timestamp_start" value="2026-11-14T15:40:33+00:00" />
+			<date key="timestamp_end" value="2026-11-14T15:40:40.666667+00:00" />
+			<float key="duration_seconds" value="7.666666666666667" />
+			<string key="concept:name" value="finishing  adjusting furniture component on floor" />
+			<date key="time:timestamp" value="2026-11-14T15:40:33+00:00" />
+			<int key="@@index" value="7" />
+			<int key="@@case_index" value="0" />
+		</event>
+	</trace>
+</log>
