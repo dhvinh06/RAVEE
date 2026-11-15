@@ -11,7 +11,8 @@ from PIL import Image, ImageTk
 from toolbox.semantic_aggregation import GroupEditor, ReviewCancelled, segment_records, propose_task_groups
 
 
-def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_mapping=None, offline=False):
+def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_mapping=None, offline=False,
+                       refresh_suggestions=False):
     records = segment_records(detailed_df)
     editor = GroupEditor(records, initial_groups, task_mapping)
     by_id = {row['segment_id']: row for row in records}
@@ -85,12 +86,15 @@ def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_map
     ttk.Label(footer, textvariable=status, wraplength=700).grid(row=0, column=0, sticky='w')
     suggest_button = ttk.Button(footer, text='Suggest task groups (Gemini)')
     suggest_button.grid(row=1, column=0, sticky='w', pady=(6, 0))
+    refresh_button = ttk.Button(footer, text='Refresh AI suggestions')
+    refresh_button.grid(row=2, column=0, sticky='w', pady=(6, 0))
     confirm_button = ttk.Button(footer, text='Confirm task groups')
     confirm_button.grid(row=1, column=1, padx=6)
     cancel_button = ttk.Button(footer, text='Cancel review')
     cancel_button.grid(row=1, column=2)
     if offline:
         suggest_button.configure(state='disabled')
+        refresh_button.configure(state='disabled')
         status.set('Offline review: Gemini is disabled. Edit, merge and split groups, then confirm.')
 
     cap = cv2.VideoCapture(str(video_path))
@@ -99,6 +103,9 @@ def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_map
     result, playback, polling = None, None, None
     queue = Queue()
     pending = False
+    boundary_sources = []
+    if refresh_suggestions and not offline:
+        status.set('Refresh selected: the next AI request rechecks every boundary. No API call until you request it.')
     mutation_buttons = (apply_button, merge_button, split_button, undo_button, reset_button, confirm_button)
 
     def selection():
@@ -132,6 +139,13 @@ def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_map
         split_at.configure(values=choices)
         split_at.set(str(choices[len(choices) // 2]) if choices else '')
         lines = [group['explanation'], '']
+        for evaluation in boundary_sources:
+            if (evaluation['left_segment_id'] in group['source_segment_ids']
+                    or evaluation['right_segment_id'] in group['source_segment_ids']):
+                source = evaluation['source']
+                source = 'OLD cached fallback — NOT fresh' if source == 'fallback' else source
+                lines.append(f'Boundary {evaluation["left_segment_id"]} → '
+                             f'{evaluation["right_segment_id"]}: {source}')
         for sid in group['source_segment_ids']:
             row = by_id[sid]
             lines.append(f'Segment {sid}: {row["activity"]}\nFrames {row["start_frame"]}-{row["end_frame"]}\n'
@@ -208,36 +222,59 @@ def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_map
         label.configure(state='disabled' if value else 'normal')
         reason.configure(state='disabled' if value else 'normal')
         suggest_button.configure(state='disabled' if value or offline else 'normal')
+        refresh_button.configure(state='disabled' if value or offline else 'normal')
 
-    def suggest():
+    def suggest(force_refresh=False):
+        nonlocal refresh_suggestions
         if offline or pending:
             return
+        refresh_requested = force_refresh or refresh_suggestions
         if not messagebox.askyesno('Gemini task proposals',
+                ('Re-evaluate all boundaries, bypassing this case\'s AI boundary cache? '
+                 'Valid old results will be labeled as fallbacks if refresh fails. ' if refresh_requested else '') +
                 'Send existing labels, timestamps and sampled video context to the configured Gemini model? '
                 'API charges may apply. Your current edits will be replaced by proposals; Undo can restore them.',
                 parent=root):
             return
+        refresh_suggestions = False  # CLI arms one explicit request; Refresh always forces a new one.
         lock(True)
         status.set('Gemini is proposing adjacent task groups. You must still review and confirm.')
 
         def worker():
             try:
-                queue.put((propose_task_groups(video_path, detailed_df.copy(deep=True)), None))
+                summary = {}
+                groups = propose_task_groups(video_path, detailed_df.copy(deep=True),
+                    progress=lambda message: queue.put(('progress', message, None)), stats=summary,
+                    refresh_suggestions=refresh_requested)
+                queue.put(('result', groups, summary))
             except Exception as error:
-                queue.put((None, str(error)))
+                queue.put(('error', None, str(error)))
         Thread(target=worker, daemon=True).start()
 
     def poll():
-        nonlocal polling
+        nonlocal polling, boundary_sources
         try:
-            groups, error = queue.get_nowait()
-            lock(False)
-            if error:
-                status.set('AI unavailable; current groups preserved. Manual review still works. ' + error[:220])
-            else:
-                editor.replace(groups)
-                refresh()
-                status.set('AI proposals loaded, not confirmed. Review shared objectives, retries and unclear actions.')
+            while True:
+                kind, payload, detail = queue.get_nowait()
+                if kind == 'progress':
+                    status.set(payload)
+                    continue
+                lock(False)
+                if kind == 'error':
+                    status.set('AI unavailable; current groups preserved. Manual review still works. ' + detail[:220])
+                else:
+                    boundary_sources = detail['boundary_sources']
+                    if detail['total'] > 0 and detail['unresolved'] == detail['total']:
+                        status.set('AI unavailable; current groups preserved. All boundaries remain '
+                                   f"unresolved for manual review ({detail['error']}). Try again later to resume.")
+                        continue
+                    editor.replace(payload)
+                    refresh()
+                    status.set(f"Proposals ready, not confirmed: {detail['api_calls']} API calls; "
+                               f"{detail['fresh']} fresh; {detail['cache_hits']} reused "
+                               f"({detail['fallback']} OLD fallbacks); {detail['unresolved']} unresolved. "
+                               f"{detail['error'] + '; ' if detail['error'] else ''}"
+                               'Review, merge or split manually before confirming.')
         except Empty:
             pass
         polling = root.after(150, poll)
@@ -271,6 +308,7 @@ def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_map
     undo_button.configure(command=lambda: act(editor.undo))
     reset_button.configure(command=lambda: act(editor.reset))
     suggest_button.configure(command=suggest)
+    refresh_button.configure(command=lambda: suggest(force_refresh=True))
     confirm_button.configure(command=confirm)
     cancel_button.configure(command=cancel)
     root.protocol('WM_DELETE_WINDOW', cancel)

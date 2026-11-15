@@ -59,7 +59,104 @@ def proposal(records, groups=None, decisions=None):
             'boundaries': boundaries(records) if decisions is None else decisions}
 
 
+def task_boundaries(records, label, *, relation='execution', **kwargs):
+    return [dict(decision, task_boundary='continuing', task_objective=label)
+            for decision in boundaries(records, label, relation=relation, **kwargs)]
+
+
 class GroupingTests(unittest.TestCase):
+    def test_task_phases_reconcile_eleven_atomic_actions_without_a_task_count_rule(self):
+        df = detailed(['Pick up decoration', 'Attempt insertion', 'Adjust decoration', 'Insert decoration',
+                       'Position pine sprig', 'Adjust pine sprig', 'Tie bow', 'Tighten bow',
+                       'Cut ribbon', 'Inspect ribbon', 'Trim ribbon'])
+        snapshot = df.copy(deep=True)
+        records = s.segment_records(df)
+        decisions = []
+        task_specs = [(0, 4, 'Attach decoration', ['preparation', 'correction', 'execution']),
+                      (4, 6, 'Place pine sprig', ['refinement']),
+                      (6, 8, 'Tie ribbon bow', ['new_operation']),
+                      (8, 11, 'Trim ribbon', ['inspection_pause', 'refinement'])]
+        for start, end, label, relations in task_specs:
+            if start:
+                decisions.extend(task_boundaries(records[start - 1:start + 1], label))
+                decisions[-1].update(task_boundary='new_task', objective_continuity='different',
+                                    evidence='The previous result is left and work starts toward another result')
+            task = task_boundaries(records[start:end], label,
+                evidence=f'Visible target state develops toward one result: {label}')
+            for decision, relation in zip(task, relations):
+                decision['operation_relation'] = relation
+            decisions.extend(task)
+        initial = [group([row], row['activity']) for row in records]
+        result = s._protect_proposals(initial, records, decisions)
+        self.assertEqual([g['source_segment_ids'] for g in result],
+                         [[1, 2, 3, 4], [5, 6], [7, 8], [9, 10, 11]])
+        self.assertEqual([g['suggested_task_label'] for g in result], [spec[2] for spec in task_specs])
+        pd.testing.assert_frame_equal(df, snapshot)
+
+    def test_related_components_and_different_verbs_can_complete_one_assembly_task(self):
+        records = s.segment_records(detailed(['Collect bracket', 'Position screw', 'Drive screw', 'Check joint']))
+        decisions = task_boundaries(records, 'Secure bracket', object_continuity='related',
+            evidence='The bracket and screw remain at the same joint; driving and checking secure that joint')
+        for decision, phase in zip(decisions, ['preparation', 'new_operation', 'completion_check']):
+            decision['operation_relation'] = phase
+        result = s._protect_proposals([group([r], r['activity']) for r in records], records, decisions)
+        self.assertEqual([g['source_segment_ids'] for g in result], [[1, 2, 3, 4]])
+
+    def test_related_object_without_explicit_task_evidence_does_not_merge(self):
+        records = s.segment_records(detailed(['Move part', 'Move part']))
+        decisions = boundaries(records, object_continuity='related')
+        self.assertEqual(len(s._protect_proposals([group(records)], records, decisions)), 2)
+
+    def test_completion_and_new_task_split_identical_actions_on_the_same_target(self):
+        records = s.segment_records(detailed(['Turn handle', 'Turn handle', 'Turn handle']))
+        decisions = task_boundaries(records, 'Set valve pressure', relation='continuation',
+            evidence='The first setting is complete; the operator starts a separate adjustment cycle')
+        decisions[1]['task_boundary'] = 'new_task'
+        result = s._protect_proposals([group(records)], records, decisions)
+        self.assertEqual([g['source_segment_ids'] for g in result], [[1, 2], [3]])
+
+    def test_similar_movements_for_distinct_results_or_targets_do_not_merge(self):
+        records = s.segment_records(detailed(['Rotate component', 'Rotate component']))
+        for update in ({'objective_continuity': 'different'}, {'object_continuity': 'different'},
+                       {'task_boundary': 'unclear'}):
+            with self.subTest(update=update):
+                decisions = task_boundaries(records, 'Adjust mechanism', relation='new_operation')
+                decisions[0].update(update)
+                self.assertEqual(len(s._protect_proposals([group(records)], records, decisions)), 2)
+
+    def test_pairwise_continuity_cannot_drift_into_a_different_task_objective(self):
+        records = s.segment_records(detailed(['Prepare part', 'Handle part', 'Adjust part', 'Check part']))
+        decisions = task_boundaries(records, 'Align joint')
+        for decision in decisions[1:]:
+            decision.update(task_objective='Seal joint', suggested_task_label='Seal joint')
+        result = s._protect_proposals([group([r], r['activity']) for r in records], records, decisions)
+        self.assertEqual([g['source_segment_ids'] for g in result], [[1, 2], [3, 4]])
+
+    def test_unclear_atomic_label_requires_explicit_low_uncertainty_task_evidence(self):
+        records = s.segment_records(detailed(['Position housing', 'Unclear activity', 'Check housing fit']))
+        decisions = task_boundaries(records, 'Seat housing',
+            evidence='The same visible housing moves into the socket and its seated fit is checked')
+        initial = [group([r], r['activity']) for r in records]
+        result = s._protect_proposals(initial, records, decisions)
+        self.assertEqual([g['source_segment_ids'] for g in result], [[1, 2, 3]])
+        for decision in decisions:
+            decision['uncertainty'] = 'medium'
+        self.assertEqual(len(s._protect_proposals(initial, records, decisions)), 3)
+
+    def test_malformed_task_evidence_is_rejected_instead_of_relaxing_guards(self):
+        records = s.segment_records(detailed(['Collect part', 'Fit part']))
+        for update in ({'task_boundary': 'probably'}, {'task_objective': ''}, {'task_objective': True},
+                       {'task_objective': 'x' * 151}):
+            decisions = task_boundaries(records, 'Fit part')
+            decisions[0].update(update)
+            with self.subTest(update=update), self.assertRaises(ValueError):
+                s._protect_proposals([group(records)], records, decisions)
+        for missing in ('task_boundary', 'task_objective'):
+            decisions = task_boundaries(records, 'Fit part')
+            del decisions[0][missing]
+            with self.subTest(missing=missing), self.assertRaises(ValueError):
+                s._protect_proposals([group(records)], records, decisions)
+
     def test_segments_9_10_11_trim_same_ribbon_with_inspection_reconcile_initial_singletons(self):
         df = detailed(['Cut ribbon', 'Inspect ribbon length', 'Trim ribbon'])
         df['segment_id'] = [9, 10, 11]
@@ -317,6 +414,17 @@ class TaskExportTests(unittest.TestCase):
 
 class GeminiProposalTests(unittest.TestCase):
     def setUp(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        cache = Path(temporary.name)
+        patcher = patch.object(s, '_video_identity', return_value={'path': 'offline', 'sha256': 'video-one'})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        original = s.propose_task_groups
+        patcher = patch.object(s, 'propose_task_groups', side_effect=lambda *a, **kw:
+                              original(*a, cache_dir=cache, **kw))
+        patcher.start()
+        self.addCleanup(patcher.stop)
         env = patch.dict(os.environ, {'GEMINI_API_KEY': 'offline-dummy', 'GOOGLE_API_KEY': '',
                                       'GEMINI_MODEL': 'configured-model', 'RAVEE_SUGGEST_MODE': 'video'})
         env.start()
@@ -338,7 +446,12 @@ class GeminiProposalTests(unittest.TestCase):
         request = self.client.models.generate_content.call_args.kwargs
         self.assertEqual(request['model'], 'configured-model')
         text = '\n'.join(part.text for part in request['contents'].parts if part.text)
-        self.assertIn('shared concrete action objective', text)
+        self.assertIn('shared concrete task objective', text)
+        self.assertIn('atomic action', text)
+        self.assertIn('task completion boundaries', text)
+        self.assertIn('task_boundary', text)
+        self.assertIn('task_objective', text)
+        self.assertIn('no predetermined task count', text)
         self.assertIn('SAME PHYSICAL OBJECT', text)
         self.assertIn('brief pause to inspect', text)
         self.assertIn('object_continuity', text)
@@ -351,12 +464,40 @@ class GeminiProposalTests(unittest.TestCase):
     def test_batch_boundary_is_reconsidered_for_one_shared_task(self):
         df = detailed(RETRIES)
         records = s.segment_records(df)
-        responses = [records[:3], records[3:], records]
+        responses = [records[:3], records[2:]]
         self.client.models.generate_content.side_effect = [SimpleNamespace(text=json.dumps(proposal(rows)))
                                                            for rows in responses]
         result = s.propose_task_groups('cached.avi', df, batch_segments=3)
         self.assertEqual(result[0]['source_segment_ids'], [1, 2, 3, 4, 5])
-        self.assertEqual(self.client.models.generate_content.call_count, 3)
+        self.assertEqual(self.client.models.generate_content.call_count, 2)
+
+    def test_batch_requests_include_neighboring_segments_as_context_only(self):
+        df = detailed(['Select panel', 'Position panel', 'Fit panel', 'Inspect panel', 'Refine panel fit'])
+        records = s.segment_records(df)
+        def respond(**kwargs):
+            payload = json.loads(kwargs['contents'].parts[1].text)
+            rows = payload['segments']
+            return SimpleNamespace(text=json.dumps(proposal(rows,
+                [group([r], r['activity']) for r in rows], task_boundaries(rows, 'Fit panel'))))
+        self.client.models.generate_content.side_effect = respond
+        result = s.propose_task_groups('cached.avi', df, batch_segments=3)
+        self.assertEqual(result[0]['source_segment_ids'], [1, 2, 3, 4, 5])
+        payloads = [json.loads(call.kwargs['contents'].parts[1].text)
+                    for call in self.client.models.generate_content.call_args_list]
+        self.assertEqual([[r['segment_id'] for r in p['segments']] for p in payloads], [[1, 2, 3], [3, 4, 5]])
+        self.assertEqual([[r['segment_id'] for r in p['context_segments']] for p in payloads], [[4, 5], [1, 2]])
+        # Both task phase evidence and context survive a cache-only resume.
+        self.client_factory.reset_mock()
+        self.assertEqual(s.propose_task_groups('cached.avi', df, batch_segments=3), result)
+        self.client_factory.assert_not_called()
+
+    def test_context_ids_cannot_be_added_to_target_groups(self):
+        records = s.segment_records(detailed(RETRIES))
+        self.client.models.generate_content.return_value = SimpleNamespace(text=json.dumps(proposal(records)))
+        from google.genai import types
+        with self.assertRaisesRegex(RuntimeError, 'Invalid semantic aggregation response'):
+            s._propose_window(self.client, 'cached.avi', records[1:4], types,
+                              context_records=records[:1] + records[4:])
 
     def test_mock_gemini_split_trimming_proposals_are_corrected_by_boundary_evidence(self):
         df = detailed(['Cut ribbon', 'Inspect ribbon length', 'Trim ribbon'])
@@ -389,11 +530,10 @@ class GeminiProposalTests(unittest.TestCase):
         for text in ('', '{"groups": []}', '{"groups": [{"source_segment_ids": [1]}]}', missing_boundaries):
             with self.subTest(text=text):
                 self.client.models.generate_content.return_value = SimpleNamespace(text=text)
-                with self.assertRaises(RuntimeError):
-                    s.propose_task_groups('cached.avi', df)
+                result = s.propose_task_groups('cached.avi', df)
+                self.assertEqual([g['source_segment_ids'] for g in result], [[1], [2]])
         self.client.models.generate_content.side_effect = RuntimeError('503 unavailable')
-        with self.assertRaisesRegex(RuntimeError, '503'):
-            s.propose_task_groups('cached.avi', df)
+        self.assertEqual(len(s.propose_task_groups('cached.avi', df)), 2)
 
     def test_missing_key_does_not_create_client(self):
         with patch.dict(os.environ, {'GEMINI_API_KEY': '', 'GOOGLE_API_KEY': ''}):
@@ -415,6 +555,44 @@ class GeminiProposalTests(unittest.TestCase):
         self.assertIn('AFTER CONTEXT', texts)
         self.assertIn('TRANSITION 1->2: source frames 0-29', texts)
         self.assertIn('not an additional action or attempt', texts)
+
+    def test_neighbor_media_is_explicitly_context_only_in_video_and_frames_modes(self):
+        from google.genai import types
+        records = s.segment_records(detailed(['Prepare part', 'Fit part', 'Check part']))
+        for mode in ('video', 'frames'):
+            with self.subTest(mode=mode), patch.dict(os.environ, {'RAVEE_SUGGEST_MODE': mode}), \
+                 patch.object(v3, '_context_windows', return_value=(15, [])), \
+                 patch.object(v3, '_make_clip', return_value=b'clip'), \
+                 patch.object(v3, '_sample_frames', return_value=[(0, 0., b'jpeg')]):
+                parts = MAKE_MEDIA('cached.avi', records[1:2], types, records[:1] + records[2:])
+            texts = '\n'.join(part.text for part in parts if part.text)
+            self.assertIn('CONTEXT ONLY SEGMENT 1: source frames 0-14', texts)
+            self.assertIn('SEGMENT 2: source frames 15-29', texts)
+            self.assertIn('CONTEXT ONLY SEGMENT 3: source frames 30-44', texts)
+
+    def test_long_segment_supplies_start_and_completion_stills_without_longer_clip(self):
+        from google.genai import types
+        records = s.segment_records(detailed(['Assemble part']))
+        records[0]['end_frame'] = 599
+        with patch.object(v3, '_context_windows', return_value=(15, [])), \
+             patch.object(v3, '_make_clip', return_value=b'clip'), \
+             patch.object(v3, '_sample_frames', return_value=[(0, 0., b'start'), (599, 39.933, b'end')]) as stills:
+            parts = MAKE_MEDIA('cached.avi', records, types)
+        stills.assert_called_once_with('cached.avi', 0, 599, 2)
+        texts = '\n'.join(part.text for part in parts if part.text)
+        self.assertIn('Actual clip coverage: frames 150-449', texts)
+        self.assertIn('sampled frame 0', texts)
+        self.assertIn('sampled frame 599', texts)
+
+    def test_extended_context_still_respects_existing_inline_budget(self):
+        from google.genai import types
+        records = s.segment_records(detailed(['Work on item']))
+        with patch.object(v3, '_context_windows', return_value=(15, [])), \
+             patch.object(v3, '_MAX_INLINE_BYTES', 3), \
+             patch.object(v3, '_make_clip', return_value=b'oversize'), \
+             patch.object(v3, '_sample_frames', return_value=[(0, 0., b'oversize')]):
+            with self.assertRaisesRegex(RuntimeError, 'inline media budget'):
+                MAKE_MEDIA('cached.avi', records, types)
 
 
 if __name__ == '__main__':

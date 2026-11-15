@@ -38,34 +38,124 @@ trước và một giây đầu segment sau, giới hạn trong đúng hai segme
 đây là phần phát lại chồng lấn với media segment, không phải thêm một lần thao
 tác. Video/frames mode, fallback và giới hạn tổng media của V3 vẫn được dùng.
 
-Đề xuất theo cửa sổ tối đa 12 segment. Hai nhóm nằm ở ranh giới các cửa sổ được
-xem xét lại với nhau (tối đa 24 segment) để tránh cắt một task chỉ vì batching.
-Chuỗi dài hơn giới hạn này giữ ranh giới để người dùng gộp thêm. Một lần đề xuất
-có thể gồm nhiều API requests; không có request nào được chạy khi mở review.
+Đề xuất theo cửa sổ tối đa 12 segment, cửa sổ kế tiếp chồng một segment. Mỗi
+ranh giới chỉ cần đánh giá một lần, không còn request phụ để nối hai batch.
+Khi toàn bộ boundary cache còn trống và dịch vụ không lỗi, số request là
+`ceil((N - 1) / 11)` với N segment; N=1 không cần API. Cache hợp lệ được bỏ qua
+trước khi encode media hoặc tạo client. Không có request khi chỉ mở review.
 
-Prompt yêu cầu chung **cùng vật thể vật lý + cùng mục tiêu cụ thể**, kể cả khi
-có các lần thử lại, sửa sai, tinh chỉnh hoặc tạm dừng để kiểm tra rồi tiếp tục.
-Việc một micro-action kết thúc không tự chứng minh task đã hoàn tất. Mô hình
-phải xem diễn biến trước/sau inspection, nhận biết đổi vật thể, đổi mục tiêu hay
-bắt đầu thao tác mới, và không suy đoán vật thể bị tay che khuất.
+## Độ tin cậy API và tiếp tục sau lỗi
 
-Phản hồi nội bộ Gemini nay có thêm `boundaries`: đúng một quyết định cho mỗi
-cặp segment liên tiếp, gồm ID trái/phải, `object_continuity` và
-`objective_continuity` (`same/different/unclear`), `operation_relation`
-(`continuation/retry/correction/refinement/inspection_pause/new_operation/unclear`),
-mức bất định, bằng chứng quan sát và tên task chung nếu đủ cơ sở.
+Model đang cấu hình là `gemini-3.5-flash-lite`, vẫn lấy từ `GEMINI_MODEL` và
+key/.env như V3. Mọi request aggregation chạy tuần tự dưới một lock dùng chung;
+GUI vẫn dùng worker thread và chỉ cập nhật widget trên Tkinter event loop qua
+queue. Tiến độ hiển thị `Checking boundary 4/10`, thông báo retry và số boundary
+được tái sử dụng/chưa giải quyết.
 
-Ứng dụng chỉ nối khi hai segment liền kề, cùng vật thể/mục tiêu được xác nhận,
-quan hệ là tiếp tục/thử lại/sửa sai/tinh chỉnh/inspection, có bằng chứng và tên
-task, đồng thời không bị đánh dấu bất định cao. Có thể sửa đề xuất ban đầu gồm
-nhiều singleton khi các ranh giới có đủ bằng chứng liên tục. Đổi vật thể, đổi
-mục tiêu, bắt đầu thao tác mới hoặc thiếu bằng chứng đều giữ tách. Nhóm bất định
-cao và `Unclear activity` không được dùng làm cầu nối.
+Các HTTP 429, 500, 502, 503, 504 có tối đa **4 attempts** (3 retries), full jitter
+với cửa sổ backoff 1/2/4 giây. `Retry-After` hỗ trợ số giây và HTTP date; không
+retry sớm hơn chỉ dẫn này. Tổng thời gian chờ backoff tối đa 60 giây; nếu header
+yêu cầu chờ lâu hơn thì dừng lần yêu cầu đó để thử lại sau, thay vì retry sớm.
+HTTP timeout vẫn 60 giây mỗi attempt. Retry ngầm của SDK bị tắt để giới hạn này
+không nhân lên. Các lỗi khác và JSON sai không được retry tự động.
 
-Không có rule theo tên hoạt động hoặc cluster ID để quyết định nối/tách, và
-prompt không chứa danh sách hoạt động cố định. Các ví dụ ruy-băng/đồ trang trí
-chỉ nằm trong regression tests. Một nhãn giống nhau không chứng minh cùng vật
-thể hoặc mục tiêu; một nhãn khác nhau cũng không tự tạo ranh giới task.
+Mỗi boundary thành công được ghi atomic riêng tại `temp/semantic_boundary_cache`,
+có completion marker và checksum. Khóa cache gồm đường dẫn + SHA-256 nội dung
+video, các frame/ID/nhãn/timestamps đầu vào, model, prompt, generation settings,
+batch size, media mode/context và phiên bản mã aggregation/encoder. Cache hỏng,
+đang ghi dở hoặc khác đầu vào không được sử dụng. Cả quyết định nối và quyết
+định giữ tách có bằng chứng hợp lệ đều được cache; lỗi API không được cache.
+Cache này tách biệt cache preprocessing/IDT/FV/FINCH và file xác nhận thủ công.
+
+Sau lỗi dai dẳng, circuit breaker dừng các batch chưa chạy để tránh gọi dồn một
+dịch vụ đang unavailable. Boundary đã hoàn tất (kể cả từ lần trước) vẫn được dùng;
+boundary chưa giải quyết giữ riêng để review. GUI không tự Confirm. Nếu không
+boundary nào giải quyết được, các nhóm hiện tại của reviewer được giữ nguyên.
+Bấm Suggest lần sau chỉ gọi các boundary còn thiếu; Merge/Split/Undo/rename/
+Confirm vẫn hoạt động như trước.
+
+### Refresh AI suggestions
+
+Nút **Refresh AI suggestions** bỏ qua cache boundary analysis của video/case
+đang review và yêu cầu đánh giá lại mọi ranh giới liền kề bằng prompt/model đang
+cấu hình. Nó không xóa cache cũ và không thay đổi preprocessing, IDT, FV, FINCH,
+Label Suggester hay các nhóm đã xác nhận. Boundary không liền kề vẫn giữ tách
+theo validator, không cần API. Các kết quả fresh hợp lệ được ghi atomic thay
+thế đúng entry; request Suggest bình thường sau đó có thể tái sử dụng chúng.
+
+CLI có `--refresh-suggestions`, ví dụ thêm vào lệnh review cached video ở dưới.
+Flag này chỉ bật refresh cho **lần yêu cầu AI đầu tiên được người dùng xác nhận**,
+không gọi Gemini khi mở GUI. Những lần Suggest tiếp theo dùng cache bình thường;
+nút Refresh luôn buộc đánh giá mới. `--offline` vẫn khóa cả hai nút và không gọi
+API, kể cả khi có flag refresh.
+
+Nếu 503 hoặc lỗi khác khiến refresh dừng, giữ nguyên entry cũ chưa thay được.
+Chỉ cache khớp video/case/đầu vào và prompt/model/configuration hiện tại mới được
+dùng làm fallback; không dùng cache từ model/prompt khác như kết quả mới. Case ID
+được đưa vào khóa cache để các case dùng cùng video không ảnh hưởng lẫn nhau.
+
+GUI hiển thị số **fresh**, **reused**, **OLD fallbacks**, **unresolved**, cùng số
+API calls và lỗi (ví dụ HTTP 503). Chọn một nhóm sẽ thấy nguồn đánh giá ở từng
+ranh giới liên quan: `fresh`, `reused`, `OLD cached fallback — NOT fresh` hoặc
+`unresolved`. Kết quả cũ không bao giờ được đếm là fresh. Boundary không có cache
+hợp lệ và chưa đánh giá xong giữ riêng để review thủ công. Không tự Confirm.
+
+Caller Python có thể dùng `propose_task_groups(..., refresh_suggestions=True,
+stats=report, progress=callback)`; `report['boundary_sources']` chứa provenance
+theo cặp ID. Caller không cung cấp cả stats lẫn progress sẽ nhận warning nếu có
+fallback cũ. Schema task groups và Event Log vẫn giữ nguyên.
+
+Số request được kiểm tra bằng mock, không có lỗi HTTP: 11 segment **1 → 1** lần
+đầu, **0** khi cache đủ; 25 segment tối đa **5 → 3**, rồi **0** khi cache đủ.
+Với batch size=3 và 5 segment: **3 → 2**, rồi **0**. Ca lỗi mock: một batch thành
+công + một batch lỗi 503 đủ bốn attempts = **5 calls**; lần tiếp tục chỉ cần
+**1 call** cho hai boundary còn thiếu, lần sau nữa **0**. Retry attempts được
+tính vào số API calls báo ở GUI; đây không phải số đo từ Gemini thật.
+
+## Task-objective discovery
+
+Aggregation distinguishes atomic movements from tasks that produce one concrete
+observable result. Preparation, execution, retries, corrections, inspection and
+refinement can form one task even when action labels or techniques differ. Task
+completion/departure, a changed objective or an independent target starts a new
+task; visual similarity, shared tools and identical labels never suffice to merge.
+There is no fixed activity vocabulary or predetermined number of tasks.
+
+Each boundary retains the existing evidence fields and adds `task_boundary`
+(`continuing/new_task/unclear`) and a consistent `task_objective` phrase. Relations
+also include `preparation`, `execution` and `completion_check`. Explicit continuing
+task evidence can join a changed atomic `new_operation`; legacy decisions without
+these fields retain the old conservative rules. `object_continuity=related` allows
+visibly linked components of one target task, only with explicit task evidence.
+Different/unclear targets or objectives, insufficient evidence, high uncertainty,
+nonadjacent segments and explicit new-task boundaries still prevent merging.
+
+One explicit objective must remain consistent throughout a merged run, preventing
+pairwise decisions from drifting into an unrelated objective. Initial singleton
+proposals can be reconciled using boundary evidence. An `Unclear activity` label
+can participate only when explicit low-uncertainty video evidence establishes the
+ongoing task across it; the label alone cannot determine the grouping. Group-level
+high uncertainty or an explicit rejection of a shared objective still veto merging.
+
+Each request includes up to two contiguous neighboring segments on either side as
+context-only metadata and media, including transitions. Context IDs cannot appear
+in the target partition. Long clips retain V3's duration limit; two endpoint stills
+add preparation/completion state evidence when the clip is a middle excerpt. The
+existing video/frames settings, inline byte budget, batching and request counts are
+preserved. These bounded observations do not guarantee that occluded or unseen
+steps can be resolved; uncertain boundaries stay available for human review.
+
+Review, source segments, exports and cache storage formats remain unchanged.
+Prompt/implementation fingerprints naturally create new semantic analysis entries
+on the next explicit AI request; previous entries are retained, and incompatible
+prompt results are not presented as fresh or reused. Pipeline caches are untouched.
+
+Offline regressions cover multi-phase objectives with different action labels,
+related assembly components, completion followed by another task on the same
+object, similar actions on different objectives/targets, objective drift,
+context-only IDs, long-clip endpoints, cache-only resume and old cache preservation.
+The gift-wrapping sequence is a test fixture only, not an algorithm rule. No real
+Gemini request or video pipeline run is needed for these tests.
 
 Schema cuối cùng cho GUI, file review đã xác nhận và Event Log vẫn giữ nguyên.
 Phản hồi API thiếu/sai quyết định ranh giới bị từ chối, không dùng làm đề xuất
@@ -161,6 +251,12 @@ thể xác nhận chất lượng suy luận thị giác của Gemini thật.
 
 ```powershell
 & ".\.venv\Scripts\python.exe" -B -m unittest test_semantic_aggregation test_pipeline_cache -v
+```
+
+Kiểm thử riêng retry, Retry-After, partial failure, circuit breaker và cache:
+
+```powershell
+& ".\.venv\Scripts\python.exe" -B -m unittest test_semantic_reliability -v
 ```
 
 Suite offline/mock có các ca decoration retries, cutting versus tying, unclear

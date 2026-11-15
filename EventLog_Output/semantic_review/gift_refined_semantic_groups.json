@@ -1,0 +1,65 @@
+{
+  "confirmed": true,
+  "identity": "8b499f11d5314ce29f1c3452ed5ebc6d4c9234fa8d43a64ed754c8dadf4a97bc",
+  "groups": [
+    {
+      "start_frame": 0,
+      "end_frame": 121,
+      "source_segment_ids": [
+        1
+      ],
+      "suggested_task_label": "picking up the decoration",
+      "explanation": "Original segment; no semantic merge confirmed"
+    },
+    {
+      "start_frame": 122,
+      "end_frame": 219,
+      "source_segment_ids": [
+        2,
+        3,
+        4
+      ],
+      "suggested_task_label": "insert decoration into ribbon",
+      "explanation": "Uninterrupted handling of the same decoration being tucked into the ribbon.; Continuous adjustments to seat the decoration fully under the ribbon."
+    },
+    {
+      "start_frame": 220,
+      "end_frame": 521,
+      "source_segment_ids": [
+        5,
+        6
+      ],
+      "suggested_task_label": "Place pine sprig",
+      "explanation": "Manually grouped by reviewer as one task objective"
+    },
+    {
+      "start_frame": 522,
+      "end_frame": 998,
+      "source_segment_ids": [
+        7,
+        8
+      ],
+      "suggested_task_label": "tie ribbon bow",
+      "explanation": "Uninterrupted continuation of tying the ribbon bow on the gift box."
+    },
+    {
+      "start_frame": 999,
+      "end_frame": 1199,
+      "source_segment_ids": [
+        9,
+        10
+      ],
+      "suggested_task_label": "cut ribbon with scissors",
+      "explanation": "Continuous cutting action with scissors on the ribbon ends."
+    },
+    {
+      "start_frame": 1200,
+      "end_frame": 1520,
+      "source_segment_ids": [
+        11
+      ],
+      "suggested_task_label": "Cut green ribbon",
+      "explanation": "Original segment; no semantic merge confirmed"
+    }
+  ]
+}

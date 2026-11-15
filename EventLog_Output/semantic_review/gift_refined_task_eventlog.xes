@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<log xes.version="1849-2016" xes.features="nested-attributes" xmlns="http://www.xes-standard.org/">
+	<extension name="Time" prefix="time" uri="http://www.xes-standard.org/time.xesext" />
+	<extension name="Concept" prefix="concept" uri="http://www.xes-standard.org/concept.xesext" />
+	<string key="origin" value="csv" />
+	<trace>
+		<string key="concept:name" value="1" />
+		<event>
+			<int key="videoID" value="1" />
+			<string key="activity" value="picking up the decoration" />
+			<int key="frame_start" value="0" />
+			<int key="frame_end" value="121" />
+			<date key="timestamp_start" value="2026-11-15T14:21:07+00:00" />
+			<date key="timestamp_end" value="2026-11-15T14:21:15.133333+00:00" />
+			<float key="duration_seconds" value="8.133333" />
+			<string key="source_segment_ids" value="1" />
+			<string key="source_activities" value="picking up the decoration" />
+			<int key="task_group_id" value="1" />
+			<string key="group_explanation" value="Original segment; no semantic merge confirmed" />
+			<string key="concept:name" value="picking up the decoration" />
+			<date key="time:timestamp" value="2026-11-15T14:21:07+00:00" />
+			<int key="@@index" value="0" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<string key="activity" value="insert decoration into ribbon" />
+			<int key="frame_start" value="122" />
+			<int key="frame_end" value="219" />
+			<date key="timestamp_start" value="2026-11-15T14:21:15.133333+00:00" />
+			<date key="timestamp_end" value="2026-11-15T14:21:21.666667+00:00" />
+			<float key="duration_seconds" value="6.533334" />
+			<string key="source_segment_ids" value="2,3,4" />
+			<string key="source_activities" value="insert the decoration into the ribbon | insert the decoration into the ribbon | insert the decoration into the ribbon" />
+			<int key="task_group_id" value="2" />
+			<string key="group_explanation" value="Uninterrupted handling of the same decoration being tucked into the ribbon.; Continuous adjustments to seat the decoration fully under the ribbon." />
+			<string key="concept:name" value="insert decoration into ribbon" />
+			<date key="time:timestamp" value="2026-11-15T14:21:15.133333+00:00" />
+			<int key="@@index" value="1" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<string key="activity" value="Place pine sprig" />
+			<int key="frame_start" value="220" />
+			<int key="frame_end" value="521" />
+			<date key="timestamp_start" value="2026-11-15T14:21:21.666667+00:00" />
+			<date key="timestamp_end" value="2026-11-15T14:21:41.800000+00:00" />
+			<float key="duration_seconds" value="20.133333" />
+			<string key="source_segment_ids" value="5,6" />
+			<string key="source_activities" value="Place pine sprig | Place pine sprig" />
+			<int key="task_group_id" value="3" />
+			<string key="group_explanation" value="Manually grouped by reviewer as one task objective" />
+			<string key="concept:name" value="Place pine sprig" />
+			<date key="time:timestamp" value="2026-11-15T14:21:21.666667+00:00" />
+			<int key="@@index" value="2" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<string key="activity" value="tie ribbon bow" />
+			<int key="frame_start" value="522" />
+			<int key="frame_end" value="998" />
+			<date key="timestamp_start" value="2026-11-15T14:21:41.800000+00:00" />
+			<date key="timestamp_end" value="2026-11-15T14:22:13.600000+00:00" />
+			<float key="duration_seconds" value="31.799999999999997" />
+			<string key="source_segment_ids" value="7,8" />
+			<string key="source_activities" value="Tie ribbon bow | Tie ribbon bow" />
+			<int key="task_group_id" value="4" />
+			<string key="group_explanation" value="Uninterrupted continuation of tying the ribbon bow on the gift box." />
+			<string key="concept:name" value="tie ribbon bow" />
+			<date key="time:timestamp" value="2026-11-15T14:21:41.800000+00:00" />
+			<int key="@@index" value="3" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<string key="activity" value="cut ribbon with scissors" />
+			<int key="frame_start" value="999" />
+			<int key="frame_end" value="1199" />
+			<date key="timestamp_start" value="2026-11-15T14:22:13.600000+00:00" />
+			<date key="timestamp_end" value="2026-11-15T14:22:27+00:00" />
+			<float key="duration_seconds" value="13.4" />
+			<string key="source_segment_ids" value="9,10" />
+			<string key="source_activities" value="Cut ribbon with scissors | Cut ribbon with scissors" />
+			<int key="task_group_id" value="5" />
+			<string key="group_explanation" value="Continuous cutting action with scissors on the ribbon ends." />
+			<string key="concept:name" value="cut ribbon with scissors" />
+			<date key="time:timestamp" value="2026-11-15T14:22:13.600000+00:00" />
+			<int key="@@index" value="4" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<string key="activity" value="Cut green ribbon" />
+			<int key="frame_start" value="1200" />
+			<int key="frame_end" value="1520" />
+			<date key="timestamp_start" value="2026-11-15T14:22:27+00:00" />
+			<date key="timestamp_end" value="2026-11-15T14:22:48.400000+00:00" />
+			<float key="duration_seconds" value="21.4" />
+			<string key="source_segment_ids" value="11" />
+			<string key="source_activities" value="Cut green ribbon" />
+			<int key="task_group_id" value="6" />
+			<string key="group_explanation" value="Original segment; no semantic merge confirmed" />
+			<string key="concept:name" value="Cut green ribbon" />
+			<date key="time:timestamp" value="2026-11-15T14:22:27+00:00" />
+			<int key="@@index" value="5" />
+			<int key="@@case_index" value="0" />
+		</event>
+	</trace>
+</log>
