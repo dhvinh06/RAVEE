@@ -4,23 +4,15 @@
   "groups": [
     {
       "start_frame": 0,
-      "end_frame": 121,
-      "source_segment_ids": [
-        1
-      ],
-      "suggested_task_label": "picking up the decoration",
-      "explanation": "Original segment; no semantic merge confirmed"
-    },
-    {
-      "start_frame": 122,
       "end_frame": 219,
       "source_segment_ids": [
+        1,
         2,
         3,
         4
       ],
-      "suggested_task_label": "insert decoration into ribbon",
-      "explanation": "Uninterrupted handling of the same decoration being tucked into the ribbon.; Continuous adjustments to seat the decoration fully under the ribbon."
+      "suggested_task_label": "place decoration onto package",
+      "explanation": "Continuous handling of the same decoration and gift package, transitioning from picking up to inserting.; Continued positioning of the same decoration into the ribbon on the same package.; Further adjustments and tucking of the decoration into the ribbon."
     },
     {
       "start_frame": 220,
@@ -29,8 +21,8 @@
         5,
         6
       ],
-      "suggested_task_label": "Place pine sprig",
-      "explanation": "Manually grouped by reviewer as one task objective"
+      "suggested_task_label": "place pine sprig",
+      "explanation": "Continuous positioning and adjusting of the pine sprig on the same package."
     },
     {
       "start_frame": 522,
@@ -40,7 +32,7 @@
         8
       ],
       "suggested_task_label": "tie ribbon bow",
-      "explanation": "Uninterrupted continuation of tying the ribbon bow on the gift box."
+      "explanation": "Continuous tying process of the ribbon bow on the same package."
     },
     {
       "start_frame": 999,
@@ -50,7 +42,7 @@
         10
       ],
       "suggested_task_label": "cut ribbon with scissors",
-      "explanation": "Continuous cutting action with scissors on the ribbon ends."
+      "explanation": "Continued cutting and trimming of the ribbon ends with scissors."
     },
     {
       "start_frame": 1200,

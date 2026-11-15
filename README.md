@@ -1,44 +1,157 @@
-cloning ravee by Đinh Hồng Vinh, for educational purpose 
-
 # RAVEE
 
-The RAVEE project provides a general approach to extract process-mining-conform event logs from unstructured video data in an unsupervised manner.
-It targets custom datasets and is an implementation of the RAVEE reference architecture. In [Supplementary_Material_SLR](Supplementary_Material_SLR.pdf) you can see how the RAVEE differs from other works at the intersection of video data and process mining. In [Supplementary_Material_EVAL2_and_4](Supplementary_Material_EVAL2_and_4.pdf) you can find experts' opinions on the design and the results of RAVEE.
+RAVEE turns videos into reviewed activity segments, semantic tasks and event logs
+for process mining. This working fork adds cached non-demo processing, Gemini
+Label Suggester V3, human-reviewed Semantic Task Aggregation and process-model export.
 
-![](demo_RAVEE/GUI.png)
+## Architecture
 
-## Dependencies
+| Stage | Implementation | Result |
+| --- | --- | --- |
+| Preprocess input videos | `toolbox/preprocessing.py` | Reduced videos |
+| Extract raw trajectories | `IDT/` Docker subsystem | Frame-indexed trajectory arrays |
+| Encode features | `toolbox/feature_extraction.py` | PCA/GMM/Fisher Vector features |
+| Temporal clustering | `finch/finch.py` | Original FINCH segments |
+| Label and review segments | `gui/gui_elements.py`, `label_suggester.py` | Confirmed activity labels |
+| Discover and review tasks | `toolbox/semantic_aggregation.py`, `gui/semantic_review.py` | Confirmed groups of original segments |
+| Export logs and model | `toolbox/event_log_creation.py` | Detailed/task CSV and XES; task BPMN as PNG/SVG |
 
-The RAVEE project uses several open source computer vision projects.
+`toolbox/pipeline_cache.py` stores validated stages under `temp/pipeline_cache/`.
+Semantic boundary analyses use `temp/semantic_boundary_cache/`. Valid entries are
+reused. Raw trajectories retain frame indices; video-level descriptor CSVs cannot
+replace them. Task grouping preserves original segment IDs, frame boundaries,
+labels and provenance. Gemini suggestions require human review and confirmation.
+The process model uses the confirmed task-level XES, without opening a viewer.
 
-- [TW-FINCH](https://github.com/ssarfraz/FINCH-Clustering/tree/master/TW-FINCH) ([License](https://github.com/ssarfraz/FINCH-Clustering/blob/master/LICENSE.txt)): For activity segmentation
-- [Dense improved trajectories](https://github.com/chuckcho/iDT/tree/master) ([License](https://github.com/chuckcho/iDT/blob/master/README.md)): For feature trajectory extraction
-- [PM4Py](https://github.com/pm4py/pm4py-core) ([License](https://github.com/pm4py/pm4py-core/blob/release/LICENSE)): For XES event log generation
-- [IKEA Dataset](https://ikeaasm.github.io/) ([License](https://ikeaasm.github.io/)): As examplary dataset for proof of concept
+## Project layout
 
+| Path | Purpose |
+| --- | --- |
+| `toolbox/` | Application entry point, processing, caches, aggregation and exports |
+| `gui/` | Segment labeling and semantic task review |
+| `finch/` | FINCH implementation; local feature/cluster output folders |
+| `IDT/` | Separate Git repository tracked as a submodule |
+| `video_input/` | Original non-demo videos |
+| `DemoFiles/`, `demo_RAVEE/` | Precomputed demo data and illustrations |
+| `temp/` | Expensive completed-stage caches and semantic analyses |
+| `EventLog_Output/` | Detailed/task event logs, review manifests and process models |
+| `tests/` | Offline/mock regression suite and application import check |
+| `docs/CLEANUP_INVENTORY.md` | Cleanup decisions, preserved candidates and IDT changes |
 
-## License
+The root `test_clip_roi.py`, `test_timesformer.py`, `test_videomae.py`,
+`test_gemini_labels_retry.py` and `test_label_suggester_v2.py` are opt-in experiment
+scripts, not offline regression tests. Some load models, inspect videos or call
+Gemini. The script named `test_label_suggester_v2.py` calls the current V3 module;
+its filename remains unchanged for CLI compatibility. `make_contact_sheet.py`
+creates the demo illustration only when run explicitly.
 
-The RAVEE project is released under the [GNU General Public License v3.0](LICENSE).
+## Setup
 
-## Functionality
+Use PowerShell from the project root. See [Install.md](Install.md) for fresh setup.
+The current working environment uses Python 3.14 and `.venv`. Keep that environment
+and its installed package versions when resuming existing caches. Source hashes
+and library versions are part of cache fingerprints; even cosmetic edits to
+fingerprinted processing/encoder files can change cache keys.
 
-The RAVEE project comprises a GUI that automates and facilitates several tasks:
-- Preprocessing of custom video datasets for activity segmentation
-- Segmentation of video files in activity steps at previously defined granularity
-- Labeling of activity steps to derive an event log
-- Extraction of process-mining-conform event logs from unstructured video data
+```powershell
+.\.venv\Scripts\Activate.ps1
+$env:PYTHONPATH = (Get-Location).Path + [IO.Path]::PathSeparator + $env:PYTHONPATH
+```
 
-## Installation
+For optional AI suggestions, put `GEMINI_API_KEY` or `GOOGLE_API_KEY` in your local
+`.env`, or set it in the environment. `GEMINI_MODEL` selects the model; the code
+currently defaults to `gemini-3.5-flash-lite`. Do not commit keys. Media settings
+are `RAVEE_SUGGEST_MODE=video|frames` and `RAVEE_SUGGEST_CONTEXT_SECONDS` (0-10,
+default 3). Manual labeling/review remains available without Gemini.
 
-Please find installation instructions in [Intall.md](Install.md).
+## Run the application
 
-## Use RAVEE For Training Or Testing Models
+Non-demo mode is currently selected by `DEMO = False` in `toolbox/main.py`.
+Place source videos in `video_input/`, then resume verified caches with:
 
-After preparing your dataset, you can run it in the demo mode, which is activated as default mode. In demo mode the RAVEE prototype uses the supplementary material provided in "DemoFiles" to run on an examplary video. In a first step you can determine the granularity level in which you want to investigate the video from four different levels provided by the prototype. Then you can label the different activity steps detected by the algorithm and extract an event log from the information obtained.
+```powershell
+python -B .\toolbox\main.py
+```
 
-If you want to run the RAVEE prototype on your own video files, you just have to turn-off the demo mode by setting the 'DEMO'-Parameter in the main.py file (provided in the toolbox folder) to 'False'. Afterwards you can create a folder called 'video_input' within your folder strucutre to store the video(s) to be investigated. When running the project docker needs to be running aswell to compute the IDT in a first step. Afterwards you can again choose the granularity level, inspect & label the activity segments just obtained and extract an event log. If you want to extract a certain number of activity steps (i.e., set a certain level of granularity), you have to set the 'required_cluster' parameter in the main.py file from 'None' to the desired number.
+This opens granularity selection, segment labeling and task review as needed.
+Missing preprocessing or raw IDT cache stops with guidance; Docker extraction
+requires explicit opt-in. For a new input, only when you intend to do expensive work:
 
-## Instantiation of RAVEE components
+```powershell
+python -B .\toolbox\main.py --allow-idt
+```
 
-You can find out which components of the RAVEE were instantiated in our software prototype in [Supplementary_Material.md](Supplementary_Material.md).
+Docker must be running for that command if extraction is needed. Existing raw
+outputs can be validated and adopted with `--adopt-existing-preprocessing` and
+`--adopt-existing-idt` when their origin/configuration is known. `--rebuild-idt`
+forces an image rebuild only when extraction is necessary. Do not delete caches
+as a troubleshooting step. To use the precomputed demo, set `DEMO = True`.
+
+The labeling GUI proposes atomic activity labels. Semantic Task Aggregation then
+groups adjacent phases toward observable objectives. Review merge/split/rename
+operations before confirming; matching action labels or cluster IDs do not decide
+tasks. Aggregation makes API requests only after an explicit GUI request. Refresh
+rechecks semantic boundaries for the current video/case, preserving old valid
+fallbacks when the service is unavailable. It does not rebuild pipeline stages.
+
+To review an existing detailed log without preprocessing, IDT or FINCH:
+
+```powershell
+python -B .\toolbox\semantic_aggregation.py --video "PATH_TO_EXISTING_REDUCED.avi" --detailed-csv .\EventLog_Output\all_videos_detailed_eventlog.csv --case-id 1 --output-dir .\EventLog_Output\semantic_review --base-name reviewed --offline
+```
+
+Replace the placeholder with the matching reduced video. `--offline` disables
+Gemini; omit it only when you want to request AI suggestions. A saved confirmed
+review loads as a draft and still requires confirmation. Detailed logs are
+checkpointed before task review; canceling does not publish a new confirmation.
+Normal processing exports `all_videos_detailed_eventlog.csv/.xes`,
+`all_videos_task_eventlog.csv/.xes` and task process-model PNG/SVG files.
+Graphviz `dot` must be on PATH for image export; logs remain usable if rendering fails.
+
+## Test without external work
+
+```powershell
+python -B -m unittest discover -s tests -t . -v
+```
+
+The suite mocks Gemini, Docker, IDT, feature extraction, FINCH and Graphviz execution.
+Some integration tests read existing local logs or cached-video metadata; an
+optional local fixture can be skipped when unavailable or unreadable. The import
+check uses a fresh process and blocks application network, GUI, video and external
+process work. Do not use repository-root test discovery to run the opt-in experiments.
+
+Run an individual suite with its package name, for example:
+
+```powershell
+python -B -m unittest tests.test_semantic_aggregation tests.test_semantic_reliability -v
+```
+
+## IDT and preserved data
+
+IDT has local source changes and data changes. A parent-repository commit only
+records the submodule commit ID; it does not include those dirty files. Preserve
+them separately before moving or cloning the project. See the exact inventory and
+backup/commit options in [docs/CLEANUP_INVENTORY.md](docs/CLEANUP_INVENTORY.md).
+`.gitmodules` declares the existing upstream URL; it does not publish local patches.
+Do not run a forced submodule update over the current working tree.
+
+Ignore rules keep new secrets, environments, caches, input media and generated
+outputs out of normal Git additions. Previously tracked demo assets, outputs,
+IDE settings and semantic-cache entries remain tracked and intact; changing that
+tracking policy is a separate review decision. Parent ignore rules do not govern
+the separate IDT repository.
+
+## Further documentation and attribution
+
+- [Non-demo pipeline and cache details](toolbox/NON_DEMO_PIPELINE.md)
+- [Label Suggester V3 and process-model export](toolbox/PROCESS_MODEL_AND_LABELS_V3.md)
+- [Semantic Task Aggregation and review](toolbox/SEMANTIC_AGGREGATION.md)
+- [Original component mapping](Supplementary_Material.md)
+
+`README.txt` contains historical V2 migration notes. Earlier implementation notes
+may describe data available at that time; use actual cache manifests to determine
+what is available now.
+
+RAVEE builds on TW-FINCH, Improved Dense Trajectories, PM4Py and the IKEA Assembly
+dataset. Original supplementary studies remain in the root PDF files. See
+[LICENSE](LICENSE) for GNU GPL v3 licensing.

@@ -109,7 +109,7 @@ CSV hay video gốc.
 ## Kiểm thử nhẹ
 
 ```powershell
-& ".\.venv\Scripts\python.exe" -m unittest test_pipeline_cache -v
+& ".\.venv\Scripts\python.exe" -m unittest tests.test_pipeline_cache -v
 ```
 
 Kiểm thử dùng dữ liệu CSV hiện có và mock cho Docker, preprocessing, FV,

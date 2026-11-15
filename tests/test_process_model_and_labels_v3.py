@@ -15,7 +15,7 @@ from unittest.mock import Mock, patch
 
 import cv2
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'toolbox'))
 
 import label_suggester as suggester
@@ -169,6 +169,11 @@ class ContextTests(unittest.TestCase):
         videos = list((ROOT / 'temp' / 'pipeline_cache' / 'preprocessing').glob('*/*.avi'))
         if not videos:
             self.skipTest('User preprocessing cache is not present')
+        try:
+            with videos[0].open('rb'):
+                pass
+        except OSError as error:
+            self.skipTest(f'User preprocessing cache is not readable: {type(error).__name__}')
         # Read only the cached video's header. No frame scan or clip encoding.
         with patch.object(genai, 'Client') as client:
             fps, windows = suggester._context_windows(videos[0], 90, 149)

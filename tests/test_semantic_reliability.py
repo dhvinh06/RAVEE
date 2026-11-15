@@ -10,7 +10,7 @@ import unittest
 import sys
 from unittest.mock import Mock, patch
 
-from test_semantic_aggregation import detailed, proposal, RETRIES
+from tests.test_semantic_aggregation import detailed, proposal, RETRIES
 from toolbox import semantic_aggregation as s
 from google import genai
 

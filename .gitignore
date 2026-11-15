@@ -1,13 +1,68 @@
-# API keys
+# Local secrets (templates may be committed)
 .env
+.env.*
+!.env.example
+!.env.template
+*.pem
+*.key
+credentials*.json
+service-account*.json
 
 # Python environment
 .venv/
+venv/
+env/
 __pycache__/
-*.pyc
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+*.egg-info/
+build/
+dist/
 
-# IntelliJ
+# Local IDE/OS state and editor backups
 .idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.bak
+*.swp
+*~
 
-# RAVEE generated cache
-temp/pipeline_cache/
+# RAVEE generated data. Ignoring does not delete or untrack existing files.
+/temp/
+/EventLog_Output/
+/finch/input/
+/finch/output/
+/video_input/
+/DemoFiles/*_eventlog.csv
+/DemoFiles/*_eventlog.xes
+/DemoFiles/*_semantic_groups.json
+/DemoFiles/*_process_model.png
+/DemoFiles/*_process_model.svg
+/DemoFiles/*contact_sheet*.jpg
+
+# Large local videos and model/array artifacts (keep existing tracked fixtures)
+*.avi
+*.mp4
+*.mov
+*.mkv
+*.wmv
+*.webm
+*.m4v
+*.mpg
+*.mpeg
+*.npy
+*.npz
+*.pkl
+*.pickle
+*.joblib
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.onnx

@@ -1,4 +1,7 @@
-"""One-time, conservative integration of Label Suggester into gui/gui_elements.py.
+"""Historical one-time integration of Label Suggester into gui/gui_elements.py.
+
+The current GUI already includes Label Suggester V3. Do not rerun this migration
+for normal setup; it is retained for older installations and rollback research.
 
 Run from the RAVEE root with:
     python integrate_label_suggester.py

@@ -1,0 +1,3 @@
+[submodule "IDT"]
+	path = IDT
+	url = https://github.com/AraMambreyan/Improved-Dense-Trajectories.git

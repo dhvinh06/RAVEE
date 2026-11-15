@@ -76,7 +76,7 @@ SDK client được đóng sau khi dùng. Không đổi model đang cấu hình 
 ## Kiểm thử offline trên dữ liệu cache
 
 ```powershell
-& ".\.venv\Scripts\python.exe" -B -m unittest test_process_model_and_labels_v3 -v
+& ".\.venv\Scripts\python.exe" -B -m unittest tests.test_process_model_and_labels_v3 -v
 ```
 
 Suite kiểm tra PNG/SVG bằng Graphviz mock, lỗi/timeout, giữ nguyên log; đọc XES

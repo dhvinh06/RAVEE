@@ -10,7 +10,7 @@ import unittest
 import pandas as pd
 import pm4py
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'toolbox'))
 from toolbox import event_log_creation as events
 from toolbox.semantic_aggregation import segment_records

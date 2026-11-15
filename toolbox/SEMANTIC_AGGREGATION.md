@@ -250,13 +250,13 @@ thể xác nhận chất lượng suy luận thị giác của Gemini thật.
 ## Kiểm thử
 
 ```powershell
-& ".\.venv\Scripts\python.exe" -B -m unittest test_semantic_aggregation test_pipeline_cache -v
+& ".\.venv\Scripts\python.exe" -B -m unittest tests.test_semantic_aggregation tests.test_pipeline_cache -v
 ```
 
 Kiểm thử riêng retry, Retry-After, partial failure, circuit breaker và cache:
 
 ```powershell
-& ".\.venv\Scripts\python.exe" -B -m unittest test_semantic_reliability -v
+& ".\.venv\Scripts\python.exe" -B -m unittest tests.test_semantic_reliability -v
 ```
 
 Suite offline/mock có các ca decoration retries, cutting versus tying, unclear
@@ -276,5 +276,5 @@ quy trình xử lý bề mặt kim loại để kiểm tra thuật toán không 
 Chạy riêng ca 9–11, không mở video hoặc gọi API:
 
 ```powershell
-& ".\.venv\Scripts\python.exe" -B -m unittest test_semantic_aggregation.GeminiProposalTests.test_mock_gemini_split_trimming_proposals_are_corrected_by_boundary_evidence -v
+& ".\.venv\Scripts\python.exe" -B -m unittest tests.test_semantic_aggregation.GeminiProposalTests.test_mock_gemini_split_trimming_proposals_are_corrected_by_boundary_evidence -v
 ```

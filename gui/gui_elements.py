@@ -165,7 +165,7 @@ def label_video_clusters(video_path, segments):
     counter = 1
 
     root = tk.Tk()
-    root.title("RAVEE - Video activity labeling")
+    root.title("RAVEE - Segment Activity Labeling")
     root.geometry("1180x760")
     root.minsize(900, 600)
 
@@ -184,7 +184,7 @@ def label_video_clusters(video_path, segments):
 
     ttk.Label(
         header,
-        text="RAVEE  |  Video Activity Labeling",
+        text="RAVEE  |  Segment Activity Labeling",
         font=("Segoe UI", 17, "bold"),
     ).grid(row=0, column=0, sticky="w")
     progress_text = tk.StringVar(value=f"0 / {len(segments)} labeled")

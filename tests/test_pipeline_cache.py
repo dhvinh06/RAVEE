@@ -20,7 +20,7 @@ import pandas as pd
 from toolbox import pipeline_cache as p
 
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def tracks():

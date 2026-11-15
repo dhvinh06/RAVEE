@@ -1,4 +1,4 @@
-"""Tkinter task review beside the existing, unchanged segment-labeling GUI."""
+"""Human review of semantic task groups above the original FINCH segments."""
 
 import tkinter as tk
 from tkinter import ttk, messagebox
@@ -17,7 +17,7 @@ def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_map
     editor = GroupEditor(records, initial_groups, task_mapping)
     by_id = {row['segment_id']: row for row in records}
     root = tk.Tk()
-    root.title('RAVEE - Semantic Event Aggregation')
+    root.title('RAVEE - Semantic Task Aggregation')
     root.geometry('1220x850')
     root.minsize(960, 700)
     root.columnconfigure(0, weight=1)
@@ -70,7 +70,7 @@ def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_map
     apply_button.pack(side='left')
     merge_button = ttk.Button(controls, text='Merge selected adjacent groups')
     merge_button.pack(side='left', padx=6)
-    ttk.Label(controls, text='Split after source ID:').pack(side='left')
+    ttk.Label(controls, text='Split after segment ID:').pack(side='left')
     split_at = ttk.Combobox(controls, state='readonly', width=7)
     split_at.pack(side='left', padx=4)
     split_button = ttk.Button(controls, text='Split')

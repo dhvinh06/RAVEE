@@ -1,3 +1,8 @@
+HISTORICAL V2 MIGRATION NOTES - NOT CURRENT SETUP
+The active implementation is Label Suggester V3. Use README.md and Install.md
+for current setup and tests. These notes and the referenced backups are retained
+for historical reference; do not apply their replacement/rollback steps to V3.
+
 RAVEE LABEL SUGGESTER v2 - VIDEO CLIPS
 ======================================
 
