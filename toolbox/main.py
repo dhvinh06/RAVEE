@@ -13,6 +13,7 @@ from gui import gui_elements
 from preprocessing import reduce_video_size, FPS_RESIZE, WIDTH_RESIZE, HEIGHT_RESIZE
 from feature_extraction import extract_framewise_features
 from pipeline_cache import prepare_features, cached_finch
+from toolbox.semantic_aggregation import review_semantic_task_log
 from display_video_snippets import run_snippets
 from event_log_creation import (
     createDF,
@@ -147,8 +148,10 @@ def main(*, allow_idt=False, adopt_preprocessing=False, adopt_idt=False, rebuild
         # Create the detailed log: preserve every contiguous FINCH segment.
         df_detailed = extractLog(caseID, label, c, idx_selected)
 
-        # Create the task-level log by mapping and merging adjacent segments.
-        df_task = extractTaskLog(df_detailed)
+        # Review semantic task groups without changing the original segments.
+        df_task = review_semantic_task_log(
+            video_path, df_detailed, eventlogOutputDemo, 'scan_video_reduced',
+        )
 
         # Export both representations.
         export_two_event_logs(
@@ -271,7 +274,9 @@ def main(*, allow_idt=False, adopt_preprocessing=False, adopt_idt=False, rebuild
                 c,
                 idx_selected,
             )
-            df_task = extractTaskLog(df_detailed)
+            df_task = review_semantic_task_log(
+                video_path, df_detailed, eventlogOutput, f'{caseID}_{name}',
+            )
 
             eventlog_detailed = pd.concat(
                 [eventlog_detailed, df_detailed],

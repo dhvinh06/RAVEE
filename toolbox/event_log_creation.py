@@ -1,5 +1,9 @@
 import datetime
 import os
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
 
 import numpy as np
 import pandas as pd
@@ -133,14 +137,67 @@ def getProcessSteps(input, index):
     return 1 + int(np.count_nonzero(selected[1:] != selected[:-1]))
 
 
-def exportCSV(dataframe, name, outputPath):
-    """Export an event dataframe as a PM4Py-formatted CSV file."""
-    event_log = pm4py.format_dataframe(
-        dataframe,
+_INTEGER_EVENT_COLUMNS = ('videoID', 'segment_id', 'cluster_id', 'frame_start',
+                          'frame_end', 'task_group_id', '@@index', '@@case_index')
+
+
+def _numeric_event_fields(dataframe):
+    """Type numeric attributes before PM4Py's broad object-to-date inference.
+
+    Also recover the specific epoch-nanosecond encoding in legacy cached CSVs.
+    Fractional durations lost by that encoding are reconstructed from real times.
+    Never mutate the caller's annotations.
+    """
+    frame = dataframe.copy(deep=True)
+    for column in (*_INTEGER_EVENT_COLUMNS, 'duration_seconds'):
+        if column not in frame:
+            continue
+        values = frame[column]
+        legacy = values.notna() & values.astype(str).str.match(
+            r'^1970-01-01[ T]00:00:00(?:\.\d{1,9})?(?:\+00:00|Z)?$')
+        if legacy.any():
+            values = values.astype(object).copy()
+            restored = pd.to_datetime(values.loc[legacy], utc=True, format='mixed')
+            values.loc[legacy] = restored.dt.as_unit('ns').astype('int64')
+            if column == 'duration_seconds':
+                # Epoch serialization discards fractional nanoseconds: timestamps
+                # retain the actual duration and are the recoverable source.
+                begin = pd.to_datetime(frame['timestamp_start'], utc=True, format='mixed')
+                finish = pd.to_datetime(frame['timestamp_end'], utc=True, format='mixed')
+                values.loc[legacy] = (finish - begin).dt.total_seconds().loc[legacy]
+        numeric = pd.to_numeric(values, errors='raise')
+        if not np.isfinite(numeric.dropna().to_numpy(dtype=float)).all():
+            raise ValueError(f'Nonfinite numeric event field: {column}')
+        if column in _INTEGER_EVENT_COLUMNS:
+            if (numeric.dropna() % 1 != 0).any():
+                raise ValueError(f'Non-integer event field: {column}')
+            frame[column] = numeric.astype('Int64' if numeric.isna().any() else 'int64')
+        else:
+            frame[column] = numeric.astype(float)
+    return frame
+
+
+def readDetailedCSV(path):
+    """Load current or affected legacy detailed logs without changing the CSV."""
+    return _numeric_event_fields(pd.read_csv(path))
+
+
+def _format_event_log(dataframe):
+    original_columns = list(dataframe.columns)
+    formatted = pm4py.format_dataframe(
+        _numeric_event_fields(dataframe),
         case_id="videoID",
         activity_key="activity",
         timestamp_key="timestamp_start",
     )
+    # PM4Py recreates its aliases, moving them behind existing index columns.
+    # Keep the established CSV schema/order when re-exporting a cached log.
+    return formatted.loc[:, original_columns + [column for column in formatted if column not in original_columns]]
+
+
+def exportCSV(dataframe, name, outputPath):
+    """Export an event dataframe as a PM4Py-formatted CSV file."""
+    event_log = _format_event_log(dataframe)
     output_file = os.path.join(outputPath, name + "_eventlog.csv")
     event_log.to_csv(output_file, index=False)
     print(f"CSV event log saved: {output_file}")
@@ -148,12 +205,7 @@ def exportCSV(dataframe, name, outputPath):
 
 def exportXES(dataframe, name, outputPath):
     """Export an event dataframe as a PM4Py XES file."""
-    event_log = pm4py.format_dataframe(
-        dataframe,
-        case_id="videoID",
-        activity_key="activity",
-        timestamp_key="timestamp_start",
-    )
+    event_log = _format_event_log(dataframe)
     output_file = os.path.join(outputPath, name + "_eventlog.xes")
     pm4py.write_xes(event_log, output_file)
     print(f"XES event log saved: {output_file}")
@@ -226,15 +278,37 @@ def extractLog(caseID, label, frameCluster, idx_selected):
     return dataframe
 
 
-def extractTaskLog(detailed_df, task_mapping=None):
+def extractTaskLog(detailed_df, task_mapping=None, *, confirmed_groups=None):
     """Aggregate adjacent detailed segments into task-level activities.
 
     Adjacent segments are merged only when they map to the same task and
     their frame ranges touch. Body-posture labels in NON_TASK_ACTIONS are
     retained in the detailed log but omitted from this task-level log.
+    With confirmed_groups, use the exact reviewed partition instead of mapping,
+    retaining every original segment and preserving explicit task boundaries.
     """
     if detailed_df.empty:
         return createTaskDF()
+
+    if confirmed_groups is not None:
+        from toolbox.semantic_aggregation import segment_records, validate_groups
+        groups = validate_groups(confirmed_groups, segment_records(detailed_df))
+        sources = {int(row['segment_id']): row for _, row in detailed_df.iterrows()}
+        task_rows = []
+        for number, group in enumerate(groups, 1):
+            members = [sources[sid] for sid in group['source_segment_ids']]
+            first, last = members[0], members[-1]
+            task_rows.append({
+                'videoID': int(first['videoID']), 'activity': group['suggested_task_label'],
+                'frame_start': int(first['frame_start']), 'frame_end': int(last['frame_end']),
+                'timestamp_start': pd.Timestamp(first['timestamp_start']),
+                'timestamp_end': pd.Timestamp(last['timestamp_end']),
+                'duration_seconds': sum(float(row['duration_seconds']) for row in members),
+                'source_segment_ids': ','.join(str(sid) for sid in group['source_segment_ids']),
+                'source_activities': ' | '.join(str(row['activity']) for row in members),
+                'task_group_id': number, 'group_explanation': group['explanation'],
+            })
+        return pd.DataFrame(task_rows, columns=(*TASK_COLUMNS, 'task_group_id', 'group_explanation'))
 
     mapping = TASK_MAPPING if task_mapping is None else task_mapping
     mapping = {str(key).strip().lower(): value for key, value in mapping.items()}
@@ -295,8 +369,53 @@ def extractTaskLog(detailed_df, task_mapping=None):
     return task_df
 
 
-def showProcessModel(data_path):
-    log = pm4py.read_xes(data_path)
-    process_tree = pm4py.discover_process_tree_inductive(log)
-    bpmn_model = pm4py.convert_to_bpmn(process_tree)
-    pm4py.view_bpmn(bpmn_model)
+def showProcessModel(data_path, output_dir=None, timeout=30):
+    """Save PNG/SVG without opening a blocking Matplotlib or Windows viewer.
+
+    Rendering is bounded by ``timeout`` seconds per format. A failed diagram
+    must not undo successful CSV/XES exports or stop the remaining pipeline.
+    Return the paths actually saved; report discovery/render errors on stderr.
+    """
+    saved = {}
+    try:
+        if not np.isfinite(timeout) or timeout <= 0:
+            raise ValueError('Render timeout must be a positive finite number')
+        from pm4py.visualization.bpmn import visualizer
+
+        source = Path(data_path)
+        directory = Path(output_dir) if output_dir is not None else source.parent
+        directory.mkdir(parents=True, exist_ok=True)
+        log = pm4py.read_xes(str(source))
+        process_tree = pm4py.discover_process_tree_inductive(log)
+        bpmn_model = pm4py.convert_to_bpmn(process_tree)
+        graph = visualizer.apply(bpmn_model)
+    except Exception as error:
+        print(f'ERROR: Cannot create process model from {data_path}: '
+              f'{type(error).__name__}: {error}. CSV/XES files are preserved.', file=sys.stderr)
+        return saved
+
+    for image_format in ('png', 'svg'):
+        destination = directory / f'{source.stem}_process_model.{image_format}'
+        try:
+            # Use dot directly so a stalled renderer has a timeout. Argument
+            # lists preserve Windows paths containing spaces, apostrophes or &.
+            with tempfile.TemporaryDirectory(prefix='ravee_model_', dir=directory) as work:
+                temporary = Path(work) / f'model.{image_format}'
+                subprocess.run(
+                    ['dot', f'-T{image_format}', '-o', str(temporary)],
+                    input=graph.source, text=True, encoding='utf-8',
+                    capture_output=True, check=True, timeout=timeout,
+                    creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0) if os.name == 'nt' else 0,
+                )
+                if not temporary.is_file() or temporary.stat().st_size == 0:
+                    raise RuntimeError('Graphviz did not produce a nonempty output file')
+                os.replace(temporary, destination)
+            saved[image_format] = str(destination)
+            print(f'Process model saved: {destination}')
+        except Exception as error:
+            detail = (error.stderr or '').strip() if isinstance(error, subprocess.CalledProcessError) else str(error)
+            print(f'ERROR: Process model {image_format.upper()} render failed: '
+                  f'{type(error).__name__}: {detail}. '
+                  f'Check Graphviz dot on PATH and output permissions: {destination}. '
+                  'CSV/XES files are preserved; processing can continue.', file=sys.stderr)
+    return saved

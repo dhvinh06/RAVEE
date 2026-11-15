@@ -1,0 +1,49 @@
+{
+  "confirmed": true,
+  "identity": "8b499f11d5314ce29f1c3452ed5ebc6d4c9234fa8d43a64ed754c8dadf4a97bc",
+  "groups": [
+    {
+      "start_frame": 0,
+      "end_frame": 219,
+      "source_segment_ids": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "suggested_task_label": "attach decoration",
+      "explanation": "The person picks up a small decorative element and inserts it into the ribbon on the wrapped gift across continuous segments."
+    },
+    {
+      "start_frame": 220,
+      "end_frame": 521,
+      "source_segment_ids": [
+        5,
+        6
+      ],
+      "suggested_task_label": "place pine sprig",
+      "explanation": "The person picks up and positions a pine sprig onto the gift package."
+    },
+    {
+      "start_frame": 522,
+      "end_frame": 998,
+      "source_segment_ids": [
+        7,
+        8
+      ],
+      "suggested_task_label": "tie ribbon bow",
+      "explanation": "The person ties a ribbon bow around the package in a continuous sequence of actions."
+    },
+    {
+      "start_frame": 999,
+      "end_frame": 1520,
+      "source_segment_ids": [
+        9,
+        10,
+        11
+      ],
+      "suggested_task_label": "cut ribbon",
+      "explanation": "The person repeatedly trims the same ribbon to adjust its length"
+    }
+  ]
+}

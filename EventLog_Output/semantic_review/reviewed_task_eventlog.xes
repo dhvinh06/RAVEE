@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<log xes.version="1849-2016" xes.features="nested-attributes" xmlns="http://www.xes-standard.org/">
+	<extension name="Concept" prefix="concept" uri="http://www.xes-standard.org/concept.xesext" />
+	<extension name="Time" prefix="time" uri="http://www.xes-standard.org/time.xesext" />
+	<string key="origin" value="csv" />
+	<trace>
+		<string key="concept:name" value="1" />
+		<event>
+			<int key="videoID" value="1" />
+			<string key="activity" value="attach decoration" />
+			<int key="frame_start" value="0" />
+			<int key="frame_end" value="219" />
+			<date key="timestamp_start" value="2026-11-15T14:21:07+00:00" />
+			<date key="timestamp_end" value="2026-11-15T14:21:21.666667+00:00" />
+			<float key="duration_seconds" value="14.666667" />
+			<string key="source_segment_ids" value="1,2,3,4" />
+			<string key="source_activities" value="picking up the decoration | insert the decoration into the ribbon | insert the decoration into the ribbon | insert the decoration into the ribbon" />
+			<int key="task_group_id" value="1" />
+			<string key="group_explanation" value="The person picks up a small decorative element and inserts it into the ribbon on the wrapped gift across continuous segments." />
+			<string key="concept:name" value="attach decoration" />
+			<date key="time:timestamp" value="2026-11-15T14:21:07+00:00" />
+			<int key="@@index" value="0" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<string key="activity" value="place pine sprig" />
+			<int key="frame_start" value="220" />
+			<int key="frame_end" value="521" />
+			<date key="timestamp_start" value="2026-11-15T14:21:21.666667+00:00" />
+			<date key="timestamp_end" value="2026-11-15T14:21:41.800000+00:00" />
+			<float key="duration_seconds" value="20.133333" />
+			<string key="source_segment_ids" value="5,6" />
+			<string key="source_activities" value="Place pine sprig | Place pine sprig" />
+			<int key="task_group_id" value="2" />
+			<string key="group_explanation" value="The person picks up and positions a pine sprig onto the gift package." />
+			<string key="concept:name" value="place pine sprig" />
+			<date key="time:timestamp" value="2026-11-15T14:21:21.666667+00:00" />
+			<int key="@@index" value="1" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<string key="activity" value="tie ribbon bow" />
+			<int key="frame_start" value="522" />
+			<int key="frame_end" value="998" />
+			<date key="timestamp_start" value="2026-11-15T14:21:41.800000+00:00" />
+			<date key="timestamp_end" value="2026-11-15T14:22:13.600000+00:00" />
+			<float key="duration_seconds" value="31.799999999999997" />
+			<string key="source_segment_ids" value="7,8" />
+			<string key="source_activities" value="Tie ribbon bow | Tie ribbon bow" />
+			<int key="task_group_id" value="3" />
+			<string key="group_explanation" value="The person ties a ribbon bow around the package in a continuous sequence of actions." />
+			<string key="concept:name" value="tie ribbon bow" />
+			<date key="time:timestamp" value="2026-11-15T14:21:41.800000+00:00" />
+			<int key="@@index" value="2" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<string key="activity" value="cut ribbon" />
+			<int key="frame_start" value="999" />
+			<int key="frame_end" value="1520" />
+			<date key="timestamp_start" value="2026-11-15T14:22:13.600000+00:00" />
+			<date key="timestamp_end" value="2026-11-15T14:22:48.400000+00:00" />
+			<float key="duration_seconds" value="34.8" />
+			<string key="source_segment_ids" value="9,10,11" />
+			<string key="source_activities" value="Cut ribbon with scissors | Cut ribbon with scissors | Cut green ribbon" />
+			<int key="task_group_id" value="4" />
+			<string key="group_explanation" value="The person repeatedly trims the same ribbon to adjust its length" />
+			<string key="concept:name" value="cut ribbon" />
+			<date key="time:timestamp" value="2026-11-15T14:22:13.600000+00:00" />
+			<int key="@@index" value="3" />
+			<int key="@@case_index" value="0" />
+		</event>
+	</trace>
+</log>

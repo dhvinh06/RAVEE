@@ -9,14 +9,14 @@
 			<date key="videoID" value="1970-01-01T00:00:00.000000001+00:00" />
 			<date key="segment_id" value="1970-01-01T00:00:00.000000001+00:00" />
 			<date key="cluster_id" value="1970-01-01T00:00:00+00:00" />
-			<string key="activity" value="tie ribbon on gift" />
+			<string key="activity" value="picking up the decoration" />
 			<date key="frame_start" value="1970-01-01T00:00:00+00:00" />
 			<date key="frame_end" value="1970-01-01T00:00:00.000000121+00:00" />
-			<date key="timestamp_start" value="2026-11-15T13:17:58+00:00" />
-			<date key="timestamp_end" value="2026-11-15T13:18:06.133333+00:00" />
+			<date key="timestamp_start" value="2026-11-15T14:21:07+00:00" />
+			<date key="timestamp_end" value="2026-11-15T14:21:15.133333+00:00" />
 			<date key="duration_seconds" value="1970-01-01T00:00:00.000000008+00:00" />
-			<string key="concept:name" value="tie ribbon on gift" />
-			<date key="time:timestamp" value="2026-11-15T13:17:58+00:00" />
+			<string key="concept:name" value="picking up the decoration" />
+			<date key="time:timestamp" value="2026-11-15T14:21:07+00:00" />
 			<int key="@@index" value="0" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -24,14 +24,14 @@
 			<date key="videoID" value="1970-01-01T00:00:00.000000001+00:00" />
 			<date key="segment_id" value="1970-01-01T00:00:00.000000002+00:00" />
 			<date key="cluster_id" value="1970-01-01T00:00:00.000000001+00:00" />
-			<string key="activity" value="tie ribbon on gift" />
+			<string key="activity" value="insert the decoration into the ribbon" />
 			<date key="frame_start" value="1970-01-01T00:00:00.000000122+00:00" />
 			<date key="frame_end" value="1970-01-01T00:00:00.000000154+00:00" />
-			<date key="timestamp_start" value="2026-11-15T13:18:06.133333+00:00" />
-			<date key="timestamp_end" value="2026-11-15T13:18:08.333333+00:00" />
+			<date key="timestamp_start" value="2026-11-15T14:21:15.133333+00:00" />
+			<date key="timestamp_end" value="2026-11-15T14:21:17.333333+00:00" />
 			<date key="duration_seconds" value="1970-01-01T00:00:00.000000002+00:00" />
-			<string key="concept:name" value="tie ribbon on gift" />
-			<date key="time:timestamp" value="2026-11-15T13:18:06.133333+00:00" />
+			<string key="concept:name" value="insert the decoration into the ribbon" />
+			<date key="time:timestamp" value="2026-11-15T14:21:15.133333+00:00" />
 			<int key="@@index" value="1" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -39,14 +39,14 @@
 			<date key="videoID" value="1970-01-01T00:00:00.000000001+00:00" />
 			<date key="segment_id" value="1970-01-01T00:00:00.000000003+00:00" />
 			<date key="cluster_id" value="1970-01-01T00:00:00+00:00" />
-			<string key="activity" value="tightening the ribbon" />
+			<string key="activity" value="insert the decoration into the ribbon" />
 			<date key="frame_start" value="1970-01-01T00:00:00.000000155+00:00" />
 			<date key="frame_end" value="1970-01-01T00:00:00.000000198+00:00" />
-			<date key="timestamp_start" value="2026-11-15T13:18:08.333333+00:00" />
-			<date key="timestamp_end" value="2026-11-15T13:18:11.266667+00:00" />
+			<date key="timestamp_start" value="2026-11-15T14:21:17.333333+00:00" />
+			<date key="timestamp_end" value="2026-11-15T14:21:20.266667+00:00" />
 			<date key="duration_seconds" value="1970-01-01T00:00:00.000000002+00:00" />
-			<string key="concept:name" value="tightening the ribbon" />
-			<date key="time:timestamp" value="2026-11-15T13:18:08.333333+00:00" />
+			<string key="concept:name" value="insert the decoration into the ribbon" />
+			<date key="time:timestamp" value="2026-11-15T14:21:17.333333+00:00" />
 			<int key="@@index" value="2" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -54,14 +54,14 @@
 			<date key="videoID" value="1970-01-01T00:00:00.000000001+00:00" />
 			<date key="segment_id" value="1970-01-01T00:00:00.000000004+00:00" />
 			<date key="cluster_id" value="1970-01-01T00:00:00.000000001+00:00" />
-			<string key="activity" value="tightening the ribbon" />
+			<string key="activity" value="insert the decoration into the ribbon" />
 			<date key="frame_start" value="1970-01-01T00:00:00.000000199+00:00" />
 			<date key="frame_end" value="1970-01-01T00:00:00.000000219+00:00" />
-			<date key="timestamp_start" value="2026-11-15T13:18:11.266667+00:00" />
-			<date key="timestamp_end" value="2026-11-15T13:18:12.666667+00:00" />
+			<date key="timestamp_start" value="2026-11-15T14:21:20.266667+00:00" />
+			<date key="timestamp_end" value="2026-11-15T14:21:21.666667+00:00" />
 			<date key="duration_seconds" value="1970-01-01T00:00:00.000000001+00:00" />
-			<string key="concept:name" value="tightening the ribbon" />
-			<date key="time:timestamp" value="2026-11-15T13:18:11.266667+00:00" />
+			<string key="concept:name" value="insert the decoration into the ribbon" />
+			<date key="time:timestamp" value="2026-11-15T14:21:20.266667+00:00" />
 			<int key="@@index" value="3" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -69,14 +69,14 @@
 			<date key="videoID" value="1970-01-01T00:00:00.000000001+00:00" />
 			<date key="segment_id" value="1970-01-01T00:00:00.000000005+00:00" />
 			<date key="cluster_id" value="1970-01-01T00:00:00+00:00" />
-			<string key="activity" value="decorating gift box with pine branch" />
+			<string key="activity" value="Place pine sprig" />
 			<date key="frame_start" value="1970-01-01T00:00:00.000000220+00:00" />
 			<date key="frame_end" value="1970-01-01T00:00:00.000000351+00:00" />
-			<date key="timestamp_start" value="2026-11-15T13:18:12.666667+00:00" />
-			<date key="timestamp_end" value="2026-11-15T13:18:21.466667+00:00" />
+			<date key="timestamp_start" value="2026-11-15T14:21:21.666667+00:00" />
+			<date key="timestamp_end" value="2026-11-15T14:21:30.466667+00:00" />
 			<date key="duration_seconds" value="1970-01-01T00:00:00.000000008+00:00" />
-			<string key="concept:name" value="decorating gift box with pine branch" />
-			<date key="time:timestamp" value="2026-11-15T13:18:12.666667+00:00" />
+			<string key="concept:name" value="Place pine sprig" />
+			<date key="time:timestamp" value="2026-11-15T14:21:21.666667+00:00" />
 			<int key="@@index" value="4" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -84,14 +84,14 @@
 			<date key="videoID" value="1970-01-01T00:00:00.000000001+00:00" />
 			<date key="segment_id" value="1970-01-01T00:00:00.000000006+00:00" />
 			<date key="cluster_id" value="1970-01-01T00:00:00.000000001+00:00" />
-			<string key="activity" value="tying ribbon on the gift box" />
+			<string key="activity" value="Place pine sprig" />
 			<date key="frame_start" value="1970-01-01T00:00:00.000000352+00:00" />
 			<date key="frame_end" value="1970-01-01T00:00:00.000000521+00:00" />
-			<date key="timestamp_start" value="2026-11-15T13:18:21.466667+00:00" />
-			<date key="timestamp_end" value="2026-11-15T13:18:32.800000+00:00" />
+			<date key="timestamp_start" value="2026-11-15T14:21:30.466667+00:00" />
+			<date key="timestamp_end" value="2026-11-15T14:21:41.800000+00:00" />
 			<date key="duration_seconds" value="1970-01-01T00:00:00.000000011+00:00" />
-			<string key="concept:name" value="tying ribbon on the gift box" />
-			<date key="time:timestamp" value="2026-11-15T13:18:21.466667+00:00" />
+			<string key="concept:name" value="Place pine sprig" />
+			<date key="time:timestamp" value="2026-11-15T14:21:30.466667+00:00" />
 			<int key="@@index" value="5" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -99,14 +99,14 @@
 			<date key="videoID" value="1970-01-01T00:00:00.000000001+00:00" />
 			<date key="segment_id" value="1970-01-01T00:00:00.000000007+00:00" />
 			<date key="cluster_id" value="1970-01-01T00:00:00+00:00" />
-			<string key="activity" value="tying ribbon on top of the gift box" />
+			<string key="activity" value="Tie ribbon bow" />
 			<date key="frame_start" value="1970-01-01T00:00:00.000000522+00:00" />
 			<date key="frame_end" value="1970-01-01T00:00:00.000000754+00:00" />
-			<date key="timestamp_start" value="2026-11-15T13:18:32.800000+00:00" />
-			<date key="timestamp_end" value="2026-11-15T13:18:48.333333+00:00" />
+			<date key="timestamp_start" value="2026-11-15T14:21:41.800000+00:00" />
+			<date key="timestamp_end" value="2026-11-15T14:21:57.333333+00:00" />
 			<date key="duration_seconds" value="1970-01-01T00:00:00.000000015+00:00" />
-			<string key="concept:name" value="tying ribbon on top of the gift box" />
-			<date key="time:timestamp" value="2026-11-15T13:18:32.800000+00:00" />
+			<string key="concept:name" value="Tie ribbon bow" />
+			<date key="time:timestamp" value="2026-11-15T14:21:41.800000+00:00" />
 			<int key="@@index" value="6" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -114,14 +114,14 @@
 			<date key="videoID" value="1970-01-01T00:00:00.000000001+00:00" />
 			<date key="segment_id" value="1970-01-01T00:00:00.000000008+00:00" />
 			<date key="cluster_id" value="1970-01-01T00:00:00.000000002+00:00" />
-			<string key="activity" value="cutting ribbon with scissors" />
+			<string key="activity" value="Tie ribbon bow" />
 			<date key="frame_start" value="1970-01-01T00:00:00.000000755+00:00" />
 			<date key="frame_end" value="1970-01-01T00:00:00.000000998+00:00" />
-			<date key="timestamp_start" value="2026-11-15T13:18:48.333333+00:00" />
-			<date key="timestamp_end" value="2026-11-15T13:19:04.600000+00:00" />
+			<date key="timestamp_start" value="2026-11-15T14:21:57.333333+00:00" />
+			<date key="timestamp_end" value="2026-11-15T14:22:13.600000+00:00" />
 			<date key="duration_seconds" value="1970-01-01T00:00:00.000000016+00:00" />
-			<string key="concept:name" value="cutting ribbon with scissors" />
-			<date key="time:timestamp" value="2026-11-15T13:18:48.333333+00:00" />
+			<string key="concept:name" value="Tie ribbon bow" />
+			<date key="time:timestamp" value="2026-11-15T14:21:57.333333+00:00" />
 			<int key="@@index" value="7" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -129,14 +129,14 @@
 			<date key="videoID" value="1970-01-01T00:00:00.000000001+00:00" />
 			<date key="segment_id" value="1970-01-01T00:00:00.000000009+00:00" />
 			<date key="cluster_id" value="1970-01-01T00:00:00.000000001+00:00" />
-			<string key="activity" value="cutting ribbon with scissors" />
+			<string key="activity" value="Cut ribbon with scissors" />
 			<date key="frame_start" value="1970-01-01T00:00:00.000000999+00:00" />
 			<date key="frame_end" value="1970-01-01T00:00:00.000001063+00:00" />
-			<date key="timestamp_start" value="2026-11-15T13:19:04.600000+00:00" />
-			<date key="timestamp_end" value="2026-11-15T13:19:08.933333+00:00" />
+			<date key="timestamp_start" value="2026-11-15T14:22:13.600000+00:00" />
+			<date key="timestamp_end" value="2026-11-15T14:22:17.933333+00:00" />
 			<date key="duration_seconds" value="1970-01-01T00:00:00.000000004+00:00" />
-			<string key="concept:name" value="cutting ribbon with scissors" />
-			<date key="time:timestamp" value="2026-11-15T13:19:04.600000+00:00" />
+			<string key="concept:name" value="Cut ribbon with scissors" />
+			<date key="time:timestamp" value="2026-11-15T14:22:13.600000+00:00" />
 			<int key="@@index" value="8" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -144,14 +144,14 @@
 			<date key="videoID" value="1970-01-01T00:00:00.000000001+00:00" />
 			<date key="segment_id" value="1970-01-01T00:00:00.000000010+00:00" />
 			<date key="cluster_id" value="1970-01-01T00:00:00.000000002+00:00" />
-			<string key="activity" value="finishing cutting ribbon with scissors" />
+			<string key="activity" value="Cut ribbon with scissors" />
 			<date key="frame_start" value="1970-01-01T00:00:00.000001064+00:00" />
 			<date key="frame_end" value="1970-01-01T00:00:00.000001199+00:00" />
-			<date key="timestamp_start" value="2026-11-15T13:19:08.933333+00:00" />
-			<date key="timestamp_end" value="2026-11-15T13:19:18+00:00" />
+			<date key="timestamp_start" value="2026-11-15T14:22:17.933333+00:00" />
+			<date key="timestamp_end" value="2026-11-15T14:22:27+00:00" />
 			<date key="duration_seconds" value="1970-01-01T00:00:00.000000009+00:00" />
-			<string key="concept:name" value="finishing cutting ribbon with scissors" />
-			<date key="time:timestamp" value="2026-11-15T13:19:08.933333+00:00" />
+			<string key="concept:name" value="Cut ribbon with scissors" />
+			<date key="time:timestamp" value="2026-11-15T14:22:17.933333+00:00" />
 			<int key="@@index" value="9" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -159,14 +159,14 @@
 			<date key="videoID" value="1970-01-01T00:00:00.000000001+00:00" />
 			<date key="segment_id" value="1970-01-01T00:00:00.000000011+00:00" />
 			<date key="cluster_id" value="1970-01-01T00:00:00.000000001+00:00" />
-			<string key="activity" value="cutting green ribbon with scissors" />
+			<string key="activity" value="Cut green ribbon" />
 			<date key="frame_start" value="1970-01-01T00:00:00.000001200+00:00" />
 			<date key="frame_end" value="1970-01-01T00:00:00.000001520+00:00" />
-			<date key="timestamp_start" value="2026-11-15T13:19:18+00:00" />
-			<date key="timestamp_end" value="2026-11-15T13:19:39.400000+00:00" />
+			<date key="timestamp_start" value="2026-11-15T14:22:27+00:00" />
+			<date key="timestamp_end" value="2026-11-15T14:22:48.400000+00:00" />
 			<date key="duration_seconds" value="1970-01-01T00:00:00.000000021+00:00" />
-			<string key="concept:name" value="cutting green ribbon with scissors" />
-			<date key="time:timestamp" value="2026-11-15T13:19:18+00:00" />
+			<string key="concept:name" value="Cut green ribbon" />
+			<date key="time:timestamp" value="2026-11-15T14:22:27+00:00" />
 			<int key="@@index" value="10" />
 			<int key="@@case_index" value="0" />
 		</event>

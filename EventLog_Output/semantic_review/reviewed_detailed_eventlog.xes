@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<log xes.version="1849-2016" xes.features="nested-attributes" xmlns="http://www.xes-standard.org/">
+	<extension name="Concept" prefix="concept" uri="http://www.xes-standard.org/concept.xesext" />
+	<extension name="Time" prefix="time" uri="http://www.xes-standard.org/time.xesext" />
+	<string key="origin" value="csv" />
+	<trace>
+		<string key="concept:name" value="1" />
+		<event>
+			<int key="videoID" value="1" />
+			<int key="segment_id" value="1" />
+			<int key="cluster_id" value="0" />
+			<string key="activity" value="picking up the decoration" />
+			<int key="frame_start" value="0" />
+			<int key="frame_end" value="121" />
+			<date key="timestamp_start" value="2026-11-15T14:21:07+00:00" />
+			<date key="timestamp_end" value="2026-11-15T14:21:15.133333+00:00" />
+			<float key="duration_seconds" value="8.133333" />
+			<int key="@@index" value="0" />
+			<int key="@@case_index" value="0" />
+			<string key="concept:name" value="picking up the decoration" />
+			<date key="time:timestamp" value="2026-11-15T14:21:07+00:00" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<int key="segment_id" value="2" />
+			<int key="cluster_id" value="1" />
+			<string key="activity" value="insert the decoration into the ribbon" />
+			<int key="frame_start" value="122" />
+			<int key="frame_end" value="154" />
+			<date key="timestamp_start" value="2026-11-15T14:21:15.133333+00:00" />
+			<date key="timestamp_end" value="2026-11-15T14:21:17.333333+00:00" />
+			<float key="duration_seconds" value="2.2" />
+			<int key="@@index" value="1" />
+			<int key="@@case_index" value="0" />
+			<string key="concept:name" value="insert the decoration into the ribbon" />
+			<date key="time:timestamp" value="2026-11-15T14:21:15.133333+00:00" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<int key="segment_id" value="3" />
+			<int key="cluster_id" value="0" />
+			<string key="activity" value="insert the decoration into the ribbon" />
+			<int key="frame_start" value="155" />
+			<int key="frame_end" value="198" />
+			<date key="timestamp_start" value="2026-11-15T14:21:17.333333+00:00" />
+			<date key="timestamp_end" value="2026-11-15T14:21:20.266667+00:00" />
+			<float key="duration_seconds" value="2.933334" />
+			<int key="@@index" value="2" />
+			<int key="@@case_index" value="0" />
+			<string key="concept:name" value="insert the decoration into the ribbon" />
+			<date key="time:timestamp" value="2026-11-15T14:21:17.333333+00:00" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<int key="segment_id" value="4" />
+			<int key="cluster_id" value="1" />
+			<string key="activity" value="insert the decoration into the ribbon" />
+			<int key="frame_start" value="199" />
+			<int key="frame_end" value="219" />
+			<date key="timestamp_start" value="2026-11-15T14:21:20.266667+00:00" />
+			<date key="timestamp_end" value="2026-11-15T14:21:21.666667+00:00" />
+			<float key="duration_seconds" value="1.4" />
+			<int key="@@index" value="3" />
+			<int key="@@case_index" value="0" />
+			<string key="concept:name" value="insert the decoration into the ribbon" />
+			<date key="time:timestamp" value="2026-11-15T14:21:20.266667+00:00" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<int key="segment_id" value="5" />
+			<int key="cluster_id" value="0" />
+			<string key="activity" value="Place pine sprig" />
+			<int key="frame_start" value="220" />
+			<int key="frame_end" value="351" />
+			<date key="timestamp_start" value="2026-11-15T14:21:21.666667+00:00" />
+			<date key="timestamp_end" value="2026-11-15T14:21:30.466667+00:00" />
+			<float key="duration_seconds" value="8.8" />
+			<int key="@@index" value="4" />
+			<int key="@@case_index" value="0" />
+			<string key="concept:name" value="Place pine sprig" />
+			<date key="time:timestamp" value="2026-11-15T14:21:21.666667+00:00" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<int key="segment_id" value="6" />
+			<int key="cluster_id" value="1" />
+			<string key="activity" value="Place pine sprig" />
+			<int key="frame_start" value="352" />
+			<int key="frame_end" value="521" />
+			<date key="timestamp_start" value="2026-11-15T14:21:30.466667+00:00" />
+			<date key="timestamp_end" value="2026-11-15T14:21:41.800000+00:00" />
+			<float key="duration_seconds" value="11.333333" />
+			<int key="@@index" value="5" />
+			<int key="@@case_index" value="0" />
+			<string key="concept:name" value="Place pine sprig" />
+			<date key="time:timestamp" value="2026-11-15T14:21:30.466667+00:00" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<int key="segment_id" value="7" />
+			<int key="cluster_id" value="0" />
+			<string key="activity" value="Tie ribbon bow" />
+			<int key="frame_start" value="522" />
+			<int key="frame_end" value="754" />
+			<date key="timestamp_start" value="2026-11-15T14:21:41.800000+00:00" />
+			<date key="timestamp_end" value="2026-11-15T14:21:57.333333+00:00" />
+			<float key="duration_seconds" value="15.533333" />
+			<int key="@@index" value="6" />
+			<int key="@@case_index" value="0" />
+			<string key="concept:name" value="Tie ribbon bow" />
+			<date key="time:timestamp" value="2026-11-15T14:21:41.800000+00:00" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<int key="segment_id" value="8" />
+			<int key="cluster_id" value="2" />
+			<string key="activity" value="Tie ribbon bow" />
+			<int key="frame_start" value="755" />
+			<int key="frame_end" value="998" />
+			<date key="timestamp_start" value="2026-11-15T14:21:57.333333+00:00" />
+			<date key="timestamp_end" value="2026-11-15T14:22:13.600000+00:00" />
+			<float key="duration_seconds" value="16.266666999999998" />
+			<int key="@@index" value="7" />
+			<int key="@@case_index" value="0" />
+			<string key="concept:name" value="Tie ribbon bow" />
+			<date key="time:timestamp" value="2026-11-15T14:21:57.333333+00:00" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<int key="segment_id" value="9" />
+			<int key="cluster_id" value="1" />
+			<string key="activity" value="Cut ribbon with scissors" />
+			<int key="frame_start" value="999" />
+			<int key="frame_end" value="1063" />
+			<date key="timestamp_start" value="2026-11-15T14:22:13.600000+00:00" />
+			<date key="timestamp_end" value="2026-11-15T14:22:17.933333+00:00" />
+			<float key="duration_seconds" value="4.333333" />
+			<int key="@@index" value="8" />
+			<int key="@@case_index" value="0" />
+			<string key="concept:name" value="Cut ribbon with scissors" />
+			<date key="time:timestamp" value="2026-11-15T14:22:13.600000+00:00" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<int key="segment_id" value="10" />
+			<int key="cluster_id" value="2" />
+			<string key="activity" value="Cut ribbon with scissors" />
+			<int key="frame_start" value="1064" />
+			<int key="frame_end" value="1199" />
+			<date key="timestamp_start" value="2026-11-15T14:22:17.933333+00:00" />
+			<date key="timestamp_end" value="2026-11-15T14:22:27+00:00" />
+			<float key="duration_seconds" value="9.066667" />
+			<int key="@@index" value="9" />
+			<int key="@@case_index" value="0" />
+			<string key="concept:name" value="Cut ribbon with scissors" />
+			<date key="time:timestamp" value="2026-11-15T14:22:17.933333+00:00" />
+		</event>
+		<event>
+			<int key="videoID" value="1" />
+			<int key="segment_id" value="11" />
+			<int key="cluster_id" value="1" />
+			<string key="activity" value="Cut green ribbon" />
+			<int key="frame_start" value="1200" />
+			<int key="frame_end" value="1520" />
+			<date key="timestamp_start" value="2026-11-15T14:22:27+00:00" />
+			<date key="timestamp_end" value="2026-11-15T14:22:48.400000+00:00" />
+			<float key="duration_seconds" value="21.4" />
+			<int key="@@index" value="10" />
+			<int key="@@case_index" value="0" />
+			<string key="concept:name" value="Cut green ribbon" />
+			<date key="time:timestamp" value="2026-11-15T14:22:27+00:00" />
+		</event>
+	</trace>
+</log>

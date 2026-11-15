@@ -367,6 +367,7 @@ class OrchestrationTests(unittest.TestCase):
             detailed = pd.DataFrame({'activity': ['wrap gift']})
             ns['extractLog'] = Mock(return_value=detailed)
             ns['extractTaskLog'] = Mock(return_value=detailed.copy())
+            ns['review_semantic_task_log'] = Mock(return_value=detailed.copy())
             for name in ('exportCSV', 'exportXES', 'showProcessModel'):
                 ns[name] = Mock()
             with contextlib.redirect_stdout(io.StringIO()):
@@ -379,7 +380,10 @@ class OrchestrationTests(unittest.TestCase):
             self.assertEqual([entry.args[1] for entry in ns['exportCSV'].call_args_list],
                              ['all_videos_detailed', 'all_videos_task'])
             self.assertEqual(ns['extractLog'].call_args.args[0], 1)
+            ns['review_semantic_task_log'].assert_called_once()
+            self.assertEqual(ns['review_semantic_task_log'].call_args.args[0], case['video_path'])
             ns['showProcessModel'].assert_called_once()
+            self.assertTrue(ns['showProcessModel'].call_args.args[0].endswith('all_videos_task_eventlog.xes'))
             self.assertTrue((Path(ns['finchOutput']) / 'gift-wrap-with-hyphens-c.csv').exists())
 
     def test_raw_mode_emits_atomic_trajectories_and_default_csv_mode_is_preserved(self):
