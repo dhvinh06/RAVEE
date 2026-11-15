@@ -278,3 +278,25 @@ Chạy riêng ca 9–11, không mở video hoặc gọi API:
 ```powershell
 & ".\.venv\Scripts\python.exe" -B -m unittest tests.test_semantic_aggregation.GeminiProposalTests.test_mock_gemini_split_trimming_proposals_are_corrected_by_boundary_evidence -v
 ```
+
+
+## Resizable review preview
+
+Semantic review now uses a horizontal `PanedWindow`. Its initial split gives
+roughly 60% of the working width to the video; drag the sash to adjust it. The
+larger initial window targets about 350-450 px of displayed video height where
+the desktop permits it, while shrinking to fit smaller screens. Playback controls
+sit immediately below the image, followed by the task label and a wrapped,
+editable grouping explanation. Source segment details have moved below the list.
+Merge, Split, Apply edits (including rename), Undo, Reset, Suggest/Refresh,
+Confirm and Cancel retain their existing callbacks and human confirmation rules.
+
+The renderer uses the largest aspect-preserving rectangle inside the actual
+preview widget, including upscaling low-resolution frames. It no longer relies
+on `PIL.Image.thumbnail()`, which cannot enlarge an image. The full frame is
+resized without cropping; remaining letterboxing follows from the aspect ratios.
+Window and sash changes repaint the current cached frame with a coalesced 40 ms
+callback. Resizing never seeks or reads video and does not restart playback.
+Resize and playback timers are canceled separately on close. The shared theme is
+unchanged. Native window geometry and playback still need desktop visual QA;
+synthetic tests cover sizing and the real callback workflow without a Tk display.

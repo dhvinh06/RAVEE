@@ -32,29 +32,35 @@ _CONTEXT_SECONDS = 3.0
 
 _PROMPT = (
     'Label ONLY the TARGET SEGMENT for video-based process mining. '
+    'Describe the specific observable action inside this interval, at action level, '
+    'not the overall task, process, scene, finished product, or purpose of the full video. '
+    'First identify the directly visible hand/tool motion and the object it acts on. '
+    'Choose the narrowest verb + object supported by that TARGET motion/state change. '
+    'If a specific manipulation is visible, do not replace it with a broad process label. '
     'BEFORE CONTEXT and AFTER CONTEXT show object state and continuity only; '
+    'use them only to resolve ambiguity about what is visible in the target, '
     'never assign an action that occurs only outside the target segment. '
-    'Observe visible hand/tool/object motion and state changes inside the target. '
+    'Longer context or a completed object is not evidence that the entire process '
+    'occurs in this segment. Observe visible hand/tool/object motion and state changes inside the target. '
     'Use an open vocabulary: a concise English verb + object label, 2 to 6 words. '
     'There is NO fixed activity list. Use the same plain wording for repeated '
     'observable actions, without inventing differences between continuing segments. '
-    'Distinguish forming a NEW ribbon bow from tightening or adjusting an EXISTING '
-    'bow. Tie ribbon bow requires visible formation of loops/knot within the target. '
-    'Pulling an already formed bow tighter is Tighten ribbon bow; repositioning '
-    'existing loops/tails is Adjust ribbon bow. These are conditional bow examples, '
-    'not a general candidate label list. Before/after appearance alone does not '
-    'prove what occurred behind hands. If hands occlude the knot/loops and the '
-    'action cannot be distinguished from direct target evidence, do not guess. '
+    'Evidence must describe directly visible TARGET motion/state change and support '
+    'the exact action named in the label, not merely the object or scene. '
+    'Before/after appearance alone does not prove what occurred behind hands. '
+    'If the specific action is occluded or cannot be distinguished from direct target '
+    'evidence, do not guess or substitute an umbrella activity. '
     'Use exactly Unclear activity when evidence is insufficient, the target action '
     'is obscured, or no single action predominates. Never infer hidden intent. '
-    'Return ONLY a JSON object with: label (the short label), evidence (a short '
-    'description of directly visible TARGET motion/state change), uncertainty '
-    '(low, medium, or high), target_visible (boolean: sufficient direct evidence), '
-    'and bow_action (tie_new, tighten_existing, adjust_existing, not_applicable, '
-    'or unclear). bow_action describes only the target; use unclear if a bow '
-    'action is suspected but cannot be distinguished. For other activities use '
-    'not_applicable. With insufficient evidence set uncertainty high, '
-    'target_visible false, and label Unclear activity.'
+    'Return ONLY a JSON object with the existing fields: label (the short action label), '
+    'evidence (directly visible TARGET motion/state change supporting that label), '
+    'uncertainty (low, medium, or high), target_visible (boolean: sufficient direct evidence), '
+    'and bow_action (tie_new, tighten_existing, adjust_existing, not_applicable, or unclear). '
+    'This last field is compatibility metadata, not a candidate activity list: '
+    'tie_new requires visible formation of loops/knot within the target; '
+    'tighten_existing and adjust_existing require visible work on an already formed bow. '
+    'For other activities use not_applicable. If this distinction is occluded use unclear. '
+    'With insufficient evidence set uncertainty high, target_visible false, and label Unclear activity.'
 )
 
 
@@ -92,6 +98,24 @@ def _context_windows(video_path, start_frame, end_frame):
     if padding and end_frame < total_frames - 1:
         windows.append(('AFTER CONTEXT', end_frame + 1, min(total_frames - 1, end_frame + padding)))
     return fps, windows
+
+
+def _target_context_windows(video_path, start_frame, end_frame):
+    """Keep before/target/after roles; bound context dominance for short targets.
+
+    Each context side is at most the target's duration, within the configured
+    maximum. Aggregation still uses _context_windows for wider task continuity.
+    """
+    fps, windows = _context_windows(video_path, start_frame, end_frame)
+    target_frames = end_frame - start_frame + 1
+    bounded = []
+    for role, start, end in windows:
+        if role == 'BEFORE CONTEXT':
+            start = max(start, start_frame - target_frames)
+        elif role == 'AFTER CONTEXT':
+            end = min(end, end_frame + target_frames)
+        bounded.append((role, start, end))
+    return fps, bounded
 
 
 def _window_description(role, start_frame, end_frame, fps):
@@ -277,7 +301,7 @@ def suggest_activity(
     if mode not in ("video", "frames"):
         raise ValueError("RAVEE_SUGGEST_MODE must be 'video' or 'frames'")
 
-    fps, windows = _context_windows(video_path, start_frame, end_frame)
+    fps, windows = _target_context_windows(video_path, start_frame, end_frame)
     prompt = (_PROMPT + f' Original target: source frames {start_frame}-{end_frame} inclusive. '
               'Media windows are supplied chronologically with separate roles.')
     target_bounds = next((start, end) for role, start, end in windows if role == 'TARGET SEGMENT')
@@ -312,6 +336,13 @@ def suggest_activity(
                     raise RuntimeError('Combined media exceed inline size limit')
                 parts.append(types.Part(text=f'{role} frame {index} at source time {seconds:.3f}s'))
                 parts.append(types.Part.from_bytes(data=jpeg, mime_type='image/jpeg'))
+    # End the chronological context with an explicit return to the exact target.
+    # This does not replay media or create another request.
+    parts.append(types.Part(text=(
+        f'Now label ONLY TARGET SEGMENT source frames {start_frame}-{end_frame}; '
+        f'actual supplied target coverage is {target_bounds[0]}-{target_bounds[1]}. '
+        'Use context only to resolve ambiguity. Return the specific visible action, '
+        'not the overall task or process; evidence must support that exact action.')))
     contents = types.Content(parts=parts)
 
     model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")

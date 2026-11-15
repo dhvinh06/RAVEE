@@ -28,7 +28,7 @@ The process model uses the confirmed task-level XES, without opening a viewer.
 | Path | Purpose |
 | --- | --- |
 | `toolbox/` | Application entry point, processing, caches, aggregation and exports |
-| `gui/` | Segment labeling and semantic task review |
+| `gui/` | Startup video selection, shared theme, segment labeling and semantic task review |
 | `finch/` | FINCH implementation; local feature/cluster output folders |
 | `IDT/` | Separate Git repository tracked as a submodule |
 | `video_input/` | Original non-demo videos |
@@ -66,26 +66,65 @@ default 3). Manual labeling/review remains available without Gemini.
 
 ## Run the application
 
-Non-demo mode is currently selected by `DEMO = False` in `toolbox/main.py`.
-Place source videos in `video_input/`, then resume verified caches with:
+Non-demo mode is selected by `DEMO = False` in `toolbox/main.py`.
+Run the same entry point from IntelliJ with no program arguments, or from PowerShell:
 
 ```powershell
 python -B .\toolbox\main.py
 ```
 
-This opens granularity selection, segment labeling and task review as needed.
-Missing preprocessing or raw IDT cache stops with guidance; Docker extraction
-requires explicit opt-in. For a new input, only when you intend to do expensive work:
+This opens **Select Video to Process** before running any pipeline stages. The
+window lists `video_input/` videos, supports **Browse** for an external video,
+**Refresh List**, and single selection. Cache inspection runs in the background:
+
+| Status | Meaning |
+| --- | --- |
+| Cached | Preprocessing, raw IDT, Fisher Vectors and FINCH all verify |
+| Partial Cache | A valid dependency chain exists, but a later stage is missing/invalid |
+| New | No usable verified preprocessing cache exists for the exact source/settings |
+
+Verification uses source SHA-256, source path, processing settings, code/package
+fingerprints, completion manifests, artifact checksums and stage validators.
+Merely selecting or browsing a video never starts processing. **Process Video**
+authorizes missing preprocessing and Docker IDT extraction **for that one video**;
+no `--allow-idt` is needed in GUI mode. Valid stages are reused, and missing stages
+run in a worker while the window shows stage progress and errors. Failures leave
+completed stages available for retry. After FINCH, the selector closes and the
+existing granularity, labeling and semantic review GUIs open on the main thread.
+Docker must be installed/running if extraction is actually needed. Closing an idle
+selector exits; a running job must finish or fail before the window can close.
+
+### CLI without the startup selector
+
+The original review/export workflow remains available explicitly:
 
 ```powershell
-python -B .\toolbox\main.py --allow-idt
+python -B .\toolbox\main.py --no-gui --video ".\video_input\example.mp4" --allow-idt
 ```
 
-Docker must be running for that command if extraction is needed. Existing raw
-outputs can be validated and adopted with `--adopt-existing-preprocessing` and
-`--adopt-existing-idt` when their origin/configuration is known. `--rebuild-idt`
-forces an image rebuild only when extraction is necessary. Do not delete caches
-as a troubleshooting step. To use the precomputed demo, set `DEMO = True`.
+`--no-gui` (alias `--cli`) bypasses **only the startup selector**; labeling/task
+review still uses its existing windows. Omit `--video` to process the input
+directory as before. For an entirely noninteractive run through FINCH, with no
+labeling, Gemini, review, event-log export or process-model rendering:
+
+```powershell
+python -B .\toolbox\main.py --no-gui --prepare-only --video ".\video_input\example.mp4" --allow-idt
+```
+
+Omit `--allow-idt` for a cache-only CLI resume (missing preprocessing/raw IDT raises
+`CacheMiss`; missing FV/FINCH can still be computed). All previous flags remain:
+`--adopt-existing-preprocessing`, `--adopt-existing-idt`, `--rebuild-idt`, and
+`--allow-idt`. For backward compatibility, supplying any legacy processing flag
+without `--gui` selects the original directory CLI mode. Use `--gui` to combine
+legacy adoption/rebuild settings with the selector. `--video` and `--prepare-only`
+select CLI mode and cannot be combined with `--gui`.
+
+Legacy adoption still requires known source/configuration provenance and full
+validation. `--rebuild-idt` rebuilds the image only when extraction is needed.
+Existing v1 cache namespaces are retained; compatible older manifests are reused
+only when their exact inputs, checksums and stage validators match. No cache
+migration or deletion is required. To use the precomputed demo, set `DEMO = True`;
+the demo retains its original review flow.
 
 The labeling GUI proposes atomic activity labels. Semantic Task Aggregation then
 groups adjacent phases toward observable objectives. Review merge/split/rename
@@ -104,8 +143,9 @@ Replace the placeholder with the matching reduced video. `--offline` disables
 Gemini; omit it only when you want to request AI suggestions. A saved confirmed
 review loads as a draft and still requires confirmation. Detailed logs are
 checkpointed before task review; canceling does not publish a new confirmation.
-Normal processing exports `all_videos_detailed_eventlog.csv/.xes`,
+Normal review/export processing retains the filenames `all_videos_detailed_eventlog.csv/.xes`,
 `all_videos_task_eventlog.csv/.xes` and task process-model PNG/SVG files.
+In selector mode these aggregate filenames contain only the selected video.
 Graphviz `dot` must be on PATH for image export; logs remain usable if rendering fails.
 
 ## Test without external work

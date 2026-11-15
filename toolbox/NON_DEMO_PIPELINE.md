@@ -1,3 +1,11 @@
+> Startup update: `python toolbox/main.py` with no arguments now opens the
+> video selector. Process Video authorizes missing stages for exactly one source.
+> The directory/cache-only commands in the historical notes below require
+> `--no-gui`. Legacy processing flags still select directory CLI mode unless
+> combined with `--gui`. For a completely noninteractive run through FINCH use
+> `--no-gui --prepare-only --video PATH [--allow-idt]`.
+> See README.md, "Run the application", for current controls and cache states.
+
 # Tiếp tục non-demo pipeline
 
 ## Dữ liệu IDT đang có

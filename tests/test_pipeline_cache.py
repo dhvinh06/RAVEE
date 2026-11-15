@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 import tempfile
 import time
 from types import SimpleNamespace
@@ -314,7 +315,7 @@ def orchestration_namespace(relative, **dependencies):
     path = ROOT / relative
     tree = ast.parse(path.read_text(encoding='utf-8'), filename=str(path))
     tree.body = [node for node in tree.body if not isinstance(node, (ast.Import, ast.ImportFrom))]
-    namespace = dict(__file__=str(path), __name__='test_orchestration', os=os,
+    namespace = dict(__file__=str(path), __name__='test_orchestration', os=os, sys=sys,
                      np=np, pd=pd, re=re, time=time, **dependencies)
     exec(compile(tree, str(path), 'exec'), namespace)
     return namespace

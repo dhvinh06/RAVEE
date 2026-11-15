@@ -12,6 +12,7 @@ from label_suggester import suggest_activity  # RAVEE_LABEL_SUGGESTER_INTEGRATED
 
 import cv2
 from PIL import Image, ImageTk
+from gui.theme import COLORS, apply_theme, fit_window, style_text, workspace_header
 
 
 # Different cluster numbers offered by FINCH
@@ -25,9 +26,17 @@ LABEL = {}
 counter = 1
 
 
+def uncommitted_segments(labels, drafts, count):
+    """Zero-based segments whose current draft still needs explicit Commit."""
+    return [i for i in range(count)
+            if not labels.get(i + 1, '').strip()
+            or labels.get(i + 1) != drafts.get(i, labels.get(i + 1, ''))]
+
+
 def popupmsg(msg, title):
     """Show a simple modal information window."""
     root = tk.Tk()
+    apply_theme(root)
     root.title(title)
     root.resizable(False, False)
     root.transient()
@@ -49,11 +58,15 @@ def inputboxList():
     global NUM_CLUSTER
 
     root = tk.Tk()
+    apply_theme(root)
     root.title("RAVEE - Select granularity")
     root.resizable(False, False)
 
-    frame = ttk.Frame(root, padding=16)
+    frame = ttk.Frame(root, padding=24)
     frame.pack(fill="both", expand=True)
+
+    ttk.Label(frame, text="RAVEE   /   Setup", style="Brand.TLabel").pack(anchor="w")
+    ttk.Label(frame, text="Choose granularity", style="Title.TLabel").pack(anchor="w", pady=(10, 12))
 
     ttk.Label(
         frame,
@@ -82,6 +95,7 @@ def inputboxList():
     ttk.Button(
         frame,
         text="Continue",
+        style="Primary.TButton",
         command=confirm
     ).pack(fill="x")
 
@@ -106,6 +120,7 @@ def inputboxLine():
     global LABEL, counter
 
     root = tk.Tk()
+    apply_theme(root)
     root.title("RAVEE - Activity label")
     root.resizable(False, False)
 
@@ -114,6 +129,7 @@ def inputboxLine():
 
     ttk.Label(frame, text="Activity label:").pack(anchor="w")
     text_box = tk.Text(frame, height=3, width=34, wrap="word")
+    style_text(text_box)
     text_box.pack(fill="both", expand=True, pady=8)
 
     def commit():
@@ -127,7 +143,7 @@ def inputboxLine():
 
     buttons = ttk.Frame(frame)
     buttons.pack(fill="x")
-    ttk.Button(buttons, text="Commit", command=commit).pack(side="left", expand=True, fill="x")
+    ttk.Button(buttons, text="Commit", style="Primary.TButton", command=commit).pack(side="left", expand=True, fill="x")
     ttk.Button(buttons, text="Exit", command=root.destroy).pack(side="left", expand=True, fill="x", padx=(8, 0))
     root.mainloop()
 
@@ -165,82 +181,73 @@ def label_video_clusters(video_path, segments):
     counter = 1
 
     root = tk.Tk()
+    apply_theme(root)
     root.title("RAVEE - Segment Activity Labeling")
-    root.geometry("1180x760")
-    root.minsize(900, 600)
-
-    style = ttk.Style(root)
-    try:
-        style.theme_use("clam")
-    except tk.TclError:
-        pass
+    fit_window(root, 1240, 820, 980, 640)
 
     root.columnconfigure(0, weight=1)
     root.rowconfigure(1, weight=1)
 
-    header = ttk.Frame(root, padding=(14, 12, 14, 8))
-    header.grid(row=0, column=0, sticky="ew")
-    header.columnconfigure(0, weight=1)
-
-    ttk.Label(
-        header,
-        text="RAVEE  |  Segment Activity Labeling",
-        font=("Segoe UI", 17, "bold"),
-    ).grid(row=0, column=0, sticky="w")
+    header = workspace_header(root, "Label video segments",
+        "Preview each segment, name the activity, then save your label.", "01  /  Segment labels")
     progress_text = tk.StringVar(value=f"0 / {len(segments)} labeled")
-    ttk.Label(header, textvariable=progress_text).grid(row=0, column=1, sticky="e")
+    ttk.Label(header, textvariable=progress_text, style="Muted.TLabel").grid(row=1, column=1, sticky="e")
 
-    body = ttk.Frame(root, padding=(14, 4, 14, 12))
+    body = ttk.Frame(root, padding=(24, 0, 24, 16))
     body.grid(row=1, column=0, sticky="nsew")
-    body.columnconfigure(0, weight=4)
-    body.columnconfigure(1, weight=1)
+    body.columnconfigure(0, weight=3, minsize=380)
+    body.columnconfigure(1, weight=2, minsize=370)
     body.rowconfigure(0, weight=1)
 
     # Left side: embedded video preview and playback controls.
-    video_panel = ttk.LabelFrame(body, text="Video preview", padding=10)
-    video_panel.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
+    video_panel = ttk.Frame(body, style="Card.TFrame", padding=16)
+    video_panel.grid(row=0, column=0, sticky="nsew", padx=(0, 16))
     video_panel.columnconfigure(0, weight=1)
-    video_panel.rowconfigure(0, weight=1)
+    video_panel.rowconfigure(1, weight=1)
+    ttk.Label(video_panel, text="Video preview", style="Section.TLabel").grid(
+        row=0, column=0, sticky="w", pady=(0, 12))
 
     video_label = tk.Label(
         video_panel,
         text="Loading video...",
-        bg="#17191d",
-        fg="white",
+        bg=COLORS["preview"],
+        fg=COLORS["surface"],
+        width=1, height=1,
         font=("Segoe UI", 12),
         anchor="center",
     )
-    video_label.grid(row=0, column=0, sticky="nsew")
+    video_label.grid(row=1, column=0, sticky="nsew")
 
     video_status = tk.StringVar(value="Frame: -")
-    ttk.Label(video_panel, textvariable=video_status).grid(row=1, column=0, sticky="w", pady=(8, 2))
+    ttk.Label(video_panel, textvariable=video_status, style="CardMuted.TLabel").grid(row=2, column=0, sticky="w", pady=(8, 2))
 
-    playback_controls = ttk.Frame(video_panel)
-    playback_controls.grid(row=2, column=0, pady=(4, 0))
+    playback_controls = ttk.Frame(video_panel, style="Card.TFrame")
+    playback_controls.grid(row=3, column=0, sticky="ew", pady=(8, 0))
+    ttk.Label(playback_controls, text="Space  Play / pause     |     Left / right  Browse",
+              style="CardMuted.TLabel").pack(anchor="w")
 
     # Right side: cluster details, label editor and segment overview.
-    side = ttk.Frame(body)
+    side = ttk.Frame(body, style="Card.TFrame", padding=16)
     side.grid(row=0, column=1, sticky="nsew")
     side.columnconfigure(0, weight=1)
-    side.rowconfigure(4, weight=1)
 
     cluster_title = tk.StringVar()
     cluster_range = tk.StringVar()
-    ttk.Label(side, text="Current segment", font=("Segoe UI", 11, "bold")).grid(row=0, column=0, sticky="w")
-    ttk.Label(side, textvariable=cluster_title, font=("Segoe UI", 22, "bold")).grid(row=1, column=0, sticky="w", pady=(4, 0))
-    ttk.Label(side, textvariable=cluster_range).grid(row=2, column=0, sticky="w", pady=(0, 12))
+    ttk.Label(side, text="Current segment", style="Section.TLabel").grid(row=0, column=0, sticky="w")
+    ttk.Label(side, textvariable=cluster_title, style="Card.TLabel", font=("Segoe UI", 16, "bold")).grid(row=1, column=0, sticky="w", pady=(4, 0))
+    ttk.Label(side, textvariable=cluster_range, style="CardMuted.TLabel").grid(row=2, column=0, sticky="w", pady=(0, 12))
 
-    ttk.Label(side, text="Activity label", font=("Segoe UI", 10, "bold")).grid(row=3, column=0, sticky="w")
+    ttk.Label(side, text="Activity label", style="Section.TLabel").grid(row=3, column=0, sticky="w")
     label_entry = ttk.Entry(side)
     label_entry.grid(row=4, column=0, sticky="new", pady=(5, 8))
 
     label_status = tk.StringVar(value="Not saved")
-    ttk.Label(side, textvariable=label_status).grid(row=5, column=0, sticky="w", pady=(0, 8))
+    ttk.Label(side, textvariable=label_status, style="CardMuted.TLabel").grid(row=5, column=0, sticky="w", pady=(0, 8))
 
-    action_button = ttk.Button(side, text="Commit & Next")
+    action_button = ttk.Button(side, text="Commit & Next", style="Primary.TButton")
     action_button.grid(row=6, column=0, sticky="ew", pady=(0, 6))
 
-    navigation = ttk.Frame(side)
+    navigation = ttk.Frame(side, style="Card.TFrame")
     navigation.grid(row=7, column=0, sticky="ew", pady=(0, 12))
     navigation.columnconfigure(0, weight=1)
     navigation.columnconfigure(1, weight=1)
@@ -252,7 +259,7 @@ def label_video_clusters(video_path, segments):
     suggest_button = ttk.Button(navigation, text="Suggest label")
     suggest_button.grid(row=0, column=2, sticky="ew", padx=(4, 0))
 
-    ttk.Label(side, text="Segment overview", font=("Segoe UI", 10, "bold")).grid(row=8, column=0, sticky="w", pady=(0, 5))
+    ttk.Label(side, text="Segment overview", style="Section.TLabel").grid(row=8, column=0, sticky="w", pady=(0, 5))
     tree = ttk.Treeview(
         side,
         columns=("cluster", "frames", "status"),
@@ -266,6 +273,7 @@ def label_video_clusters(video_path, segments):
     tree.column("cluster", width=65, anchor="center")
     tree.column("frames", width=90, anchor="center")
     tree.column("status", width=105, anchor="center")
+    tree.tag_configure("alternate", background=COLORS['stripe'])
     tree.grid(row=9, column=0, sticky="nsew")
     side.rowconfigure(9, weight=1)
 
@@ -274,11 +282,11 @@ def label_video_clusters(video_path, segments):
     tree_scroll.grid(row=9, column=1, sticky="ns")
 
     suggestion_text = tk.StringVar(value="Click Suggest label for an AI suggestion.")
-    ttk.Label(side, textvariable=suggestion_text, wraplength=260).grid(
+    ttk.Label(side, textvariable=suggestion_text, style="CardMuted.TLabel", wraplength=340).grid(
         row=10, column=0, sticky="w", pady=(6, 0)
     )
 
-    footer = ttk.Frame(root, padding=(14, 0, 14, 12))
+    footer = ttk.Frame(root, padding=(24, 0, 24, 16))
     footer.grid(row=2, column=0, sticky="ew")
     footer.columnconfigure(0, weight=1)
     progress_bar = ttk.Progressbar(footer, maximum=len(segments), mode="determinate")
@@ -291,6 +299,7 @@ def label_video_clusters(video_path, segments):
     suggestions = {}  # segment index -> proposed text (not committed)
     suggestion_queue = Queue()
     pending_suggestion = None
+    preview_image = None
 
     def segment_at(index):
         return segments[index]
@@ -324,29 +333,22 @@ def label_video_clusters(video_path, segments):
         current_saved = label_is_saved(current_index)
         label_status.set("Saved" if current_saved else "Not saved")
 
-    def render_frame(frame, frame_number):
-        frame = frame.copy()
-        cv2.putText(
-            frame,
-            f"Frame {frame_number}",
-            (18, 34),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.9,
-            (0, 255, 255),
-            2,
-            cv2.LINE_AA,
-        )
-
-        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        image = Image.fromarray(rgb)
-
+    def resize_preview(_event=None):
+        if preview_image is None:
+            return
+        image = preview_image.copy()
         # Fit the frame inside the preview without changing its aspect ratio.
-        max_width = max(video_label.winfo_width(), 800)
-        max_height = max(video_label.winfo_height(), 440)
+        max_width = max(video_label.winfo_width(), 1)
+        max_height = max(video_label.winfo_height(), 1)
         image.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
         photo = ImageTk.PhotoImage(image=image)
         video_label.configure(image=photo, text="")
         video_label.image = photo
+
+    def render_frame(frame, frame_number):
+        nonlocal preview_image
+        preview_image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+        resize_preview()
         video_status.set(f"Frame: {frame_number}")
 
     def stop_playback():
@@ -365,12 +367,13 @@ def label_video_clusters(video_path, segments):
             pass
 
     def show_segment_first_frame():
-        nonlocal current_frame
+        nonlocal current_frame, preview_image
         seg = segment_at(current_index)
         start_frame = int(seg["start_frame"])
         cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
         ret, frame = cap.read()
         if not ret:
+            preview_image = None
             video_label.configure(image="", text=f"Could not read frame {start_frame}")
             video_label.image = None
             video_status.set(f"Frame: {start_frame} (unavailable)")
@@ -488,8 +491,8 @@ def label_video_clusters(video_path, segments):
         current_index = index
         seg = segment_at(current_index)
 
-        cluster_title.set(f'Cluster {seg["cluster_id"]}  ·  Segment {current_index + 1}/{len(segments)}')
-        cluster_range.set(f'Frames {seg["start_frame"]} – {seg["end_frame"]}')
+        cluster_title.set(f'Segment {current_index + 1} of {len(segments)}')
+        cluster_range.set(f'Cluster {seg["cluster_id"]}   /   Frames {seg["start_frame"]} – {seg["end_frame"]}')
 
         label_entry.delete(0, "end")
         label_entry.insert(0, drafts.get(current_index, LABEL.get(current_index + 1, "")))
@@ -524,11 +527,11 @@ def label_video_clusters(video_path, segments):
             go_to_segment(current_index + 1)
             return
 
-        missing = [i for i in range(len(segments)) if not LABEL.get(i + 1, "").strip()]
+        missing = uncommitted_segments(LABEL, drafts, len(segments))
         if missing:
             messagebox.showinfo(
                 "Labels remaining",
-                "The last segment is saved. The GUI will move to the first unlabeled segment.",
+                "The last segment is saved. Review and commit the remaining label edits.",
                 parent=root,
             )
             go_to_segment(missing[0])
@@ -583,11 +586,7 @@ def label_video_clusters(video_path, segments):
 
     def on_close():
         save_current_draft()
-        missing = [
-            i for i in range(len(segments))
-            if not LABEL.get(i + 1, "").strip()
-               or LABEL.get(i + 1) != drafts.get(i, LABEL.get(i + 1, ""))
-        ]
+        missing = uncommitted_segments(LABEL, drafts, len(segments))
         if missing:
             messagebox.showwarning(
                 "Labeling incomplete",
@@ -601,6 +600,7 @@ def label_video_clusters(video_path, segments):
     play_button.configure(command=toggle_playback)
     suggest_button.configure(command=request_suggestion)
     action_button.configure(command=commit_and_next)
+    video_label.bind("<Configure>", resize_preview)
     tree.bind("<Double-1>", on_tree_double_click)
     label_entry.bind("<KeyRelease>", on_entry_change)
     root.bind("<space>", on_space)
@@ -615,6 +615,7 @@ def label_video_clusters(video_path, segments):
             "",
             "end",
             iid=str(i),
+            tags=("alternate",) if i % 2 else (),
             values=(str(seg["cluster_id"]), f'{seg["start_frame"]}-{seg["end_frame"]}', "Pending"),
         )
 
@@ -627,7 +628,7 @@ def label_video_clusters(video_path, segments):
     cap.release()
 
     # The existing main.py expects a label for every segment.
-    missing = [i + 1 for i in range(len(segments)) if not LABEL.get(i + 1, "").strip()]
+    missing = [i + 1 for i in uncommitted_segments(LABEL, drafts, len(segments))]
     if missing:
         raise RuntimeError(
             "Labeling window closed before all segments were labeled. "

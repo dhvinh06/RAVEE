@@ -1,6 +1,17 @@
 import os
 import argparse
 import time
+import sys
+
+# Legacy helpers import their siblings by module name. Keep those imports working
+# both for the direct IntelliJ script and package imports, without editing the
+# fingerprinted preprocessing/encoding modules.
+if os.path.dirname(os.path.abspath(__file__)) not in sys.path:
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+# Support direct IntelliJ / python toolbox/main.py execution from any cwd.
+if __name__ == "__main__":
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import cv2
 import numpy as np
@@ -10,12 +21,12 @@ from moviepy.video.io.VideoFileClip import VideoFileClip
 
 from finch.finch import FINCH
 from gui import gui_elements
-from preprocessing import reduce_video_size, FPS_RESIZE, WIDTH_RESIZE, HEIGHT_RESIZE
-from feature_extraction import extract_framewise_features
-from pipeline_cache import prepare_features, cached_finch
+from toolbox.preprocessing import reduce_video_size, FPS_RESIZE, WIDTH_RESIZE, HEIGHT_RESIZE
+from toolbox.feature_extraction import extract_framewise_features
+from toolbox.pipeline_cache import prepare_features, cached_finch, inspect_video_cache
 from toolbox.semantic_aggregation import review_semantic_task_log
-from display_video_snippets import run_snippets
-from event_log_creation import (
+from toolbox.display_video_snippets import run_snippets
+from toolbox.event_log_creation import (
     createDF,
     extractLog,
     extractTaskLog,
@@ -116,7 +127,24 @@ def export_two_event_logs(detailed_df, task_df, output_dir, base_name):
 # -----------------------------------------------------------------------------
 # Main pipeline
 # -----------------------------------------------------------------------------
-def main(*, allow_idt=False, adopt_preprocessing=False, adopt_idt=False, rebuild=False):
+def prepare_cases(*, videos=None, allow_idt=False, adopt_preprocessing=False,
+                  adopt_idt=False, rebuild=False, progress=None):
+    """One processing path for the GUI worker and CLI; never opens review windows."""
+    cache, cases = prepare_features(
+        projectDirectory, os.path.join(tempDirectoryPath, 'pipeline_cache'),
+        reduce_video_size, (FPS_RESIZE, WIDTH_RESIZE, HEIGHT_RESIZE),
+        extract_framewise_features, videos=videos, allow_idt=allow_idt,
+        adopt_preprocessing=adopt_preprocessing, adopt_idt=adopt_idt,
+        rebuild=rebuild, progress=progress)
+    partitions = {}
+    for key, case in cases.items():
+        partitions[key] = cached_finch(cache, case, required_cluster, FINCH,
+                                       projectDirectory, progress=progress)
+    return cache, cases, partitions
+
+
+def main(*, allow_idt=False, adopt_preprocessing=False, adopt_idt=False, rebuild=False,
+         videos=None, prepared=None, prepare_only=False):
     global CASEID
 
     if DEMO:
@@ -171,27 +199,17 @@ def main(*, allow_idt=False, adopt_preprocessing=False, adopt_idt=False, rebuild
     else:
         # ---------------------------------------------------------------------
         # NON-DEMO MODE
-        # Process all videos in video_input.
+        # Process the selected source, or the original directory in CLI mode.
         # ---------------------------------------------------------------------
-        os.makedirs(processedVideoOutput, exist_ok=True)
-        os.makedirs(idtOutput, exist_ok=True)
-        os.makedirs(fvOutput, exist_ok=True)
+        # The selector has already run these exact stages in its worker. The
+        # CLI calls the same helper; neither path duplicates processing.
+        cache, cases, partitions = prepared if prepared is not None else prepare_cases(
+            videos=videos, allow_idt=allow_idt, adopt_preprocessing=adopt_preprocessing,
+            adopt_idt=adopt_idt, rebuild=rebuild)
+        if prepare_only:
+            return cache, cases, partitions
         os.makedirs(finchOutput, exist_ok=True)
         os.makedirs(eventlogOutput, exist_ok=True)
-
-        # Keep video identity explicit. CSV names identify descriptor channels;
-        # their named rows contain one global FV per video, not framewise data.
-        cache, cases = prepare_features(
-            projectDirectory,
-            os.path.join(tempDirectoryPath, "pipeline_cache"),
-            reduce_video_size,
-            (FPS_RESIZE, WIDTH_RESIZE, HEIGHT_RESIZE),
-            extract_framewise_features,
-            allow_idt=allow_idt,
-            adopt_preprocessing=adopt_preprocessing,
-            adopt_idt=adopt_idt,
-            rebuild=rebuild,
-        )
 
         # Separate aggregate dataframes for detailed and task-level logs.
         eventlog_detailed = createDF()
@@ -203,9 +221,7 @@ def main(*, allow_idt=False, adopt_preprocessing=False, adopt_idt=False, rebuild
         for count, (key, case) in enumerate(cases.items()):
             start = time.time()
 
-            c, num_clust, req_c = cached_finch(
-                cache, case, required_cluster, FINCH, projectDirectory,
-            )
+            c, num_clust, req_c = partitions[key]
 
             print(
                 "Time Elapsed: {:2.2f} seconds".format(
@@ -311,17 +327,61 @@ def main(*, allow_idt=False, adopt_preprocessing=False, adopt_idt=False, rebuild
         # Preserve completed stage caches and all original input/IDT files.
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="RAVEE with validated per-input stage caches")
+def launch_interactive(*, adopt_preprocessing=False, adopt_idt=False, rebuild=False):
+    """Keep Tk on the main thread; only prepare stages run in the worker."""
+    from gui.video_selection import select_video_to_process
+
+    def inspect(source):
+        return inspect_video_cache(projectDirectory,
+            os.path.join(tempDirectoryPath, 'pipeline_cache'), source,
+            (FPS_RESIZE, WIDTH_RESIZE, HEIGHT_RESIZE), required_cluster)
+
+    def process(source, progress):
+        # Clicking Process Video explicitly authorizes missing stages, including
+        # Docker extraction, for this one path. Selecting/browsing never does.
+        return prepare_cases(videos=[source], allow_idt=True,
+            adopt_preprocessing=adopt_preprocessing, adopt_idt=adopt_idt,
+            rebuild=rebuild, progress=progress)
+
+    selected = select_video_to_process(raw_video_input, inspect, process)
+    if selected is None:
+        return
+    source, prepared = selected
+    return main(videos=[source], prepared=prepared)
+
+
+def entrypoint(argv=None):
+    parser = argparse.ArgumentParser(description="RAVEE video selection and validated stage caches")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument('--gui', action='store_true', help='Open the startup video selector (default without arguments)')
+    mode.add_argument('--no-gui', '--cli', dest='no_gui', action='store_true',
+                      help='Bypass the selector; retain the original review workflow')
+    parser.add_argument('--video', metavar='PATH', help='Process only this video in CLI mode, including an external path')
+    parser.add_argument('--prepare-only', action='store_true',
+                        help='Run cached stages through FINCH without any GUI or review/export')
     parser.add_argument('--allow-idt', action='store_true',
-                        help='Allow Docker extraction when a raw IDT cache is missing')
+                        help='Allow missing preprocessing / Docker extraction in CLI mode')
     parser.add_argument('--adopt-existing-preprocessing', action='store_true',
                         help='Validate and cache matching legacy IDT/data videos')
     parser.add_argument('--adopt-existing-idt', action='store_true',
                         help='Validate and cache matching legacy raw trajectory .npy files')
     parser.add_argument('--rebuild-idt', action='store_true',
                         help='Force image rebuild if Docker extraction is needed')
-    args = parser.parse_args()
-    main(allow_idt=args.allow_idt,
-         adopt_preprocessing=args.adopt_existing_preprocessing,
-         adopt_idt=args.adopt_existing_idt, rebuild=args.rebuild_idt)
+    args = parser.parse_args(argv)
+    if args.gui and (args.video or args.prepare_only):
+        parser.error('--video and --prepare-only select CLI mode and cannot be used with --gui')
+    if DEMO and args.prepare_only:
+        parser.error('--prepare-only requires DEMO = False')
+    options = dict(adopt_preprocessing=args.adopt_existing_preprocessing,
+                   adopt_idt=args.adopt_existing_idt, rebuild=args.rebuild_idt)
+    # Legacy processing flags retain their original directory-processing meaning.
+    # --gui can explicitly combine them with the new selector.
+    legacy_cli = args.allow_idt or any(options.values())
+    if DEMO or args.no_gui or args.video or args.prepare_only or (legacy_cli and not args.gui):
+        return main(videos=[args.video] if args.video else None,
+                    allow_idt=args.allow_idt, prepare_only=args.prepare_only, **options)
+    return launch_interactive(**options)
+
+
+if __name__ == "__main__":
+    entrypoint()

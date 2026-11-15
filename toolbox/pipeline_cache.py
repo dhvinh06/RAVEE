@@ -14,6 +14,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import tempfile
+from zipfile import BadZipFile
 from fractions import Fraction
 
 import cv2
@@ -22,6 +23,11 @@ import numpy as np
 
 VIDEO_SUFFIXES = {'.avi', '.mp4', '.mov', '.mkv', '.wmv', '.webm', '.m4v',
                   '.mpg', '.mpeg', '.mts', '.m2ts'}
+
+# Preserve the original v1 namespace. Input fingerprints below still include
+# source contents, settings, extractor sources and package versions. Hashing this
+# entire orchestration module made unrelated UI changes invalidate every stage.
+CACHE_IMPLEMENTATION_V1 = '8279078848cad387cc3285d06b49de91eaecd15880a1abf3858f0c1ca094738b'
 
 
 class CacheMiss(RuntimeError):
@@ -184,18 +190,34 @@ class StageCache:
     the completion manifest atomically; exceptions never mark a stage complete.
     """
 
-    def __init__(self, directory):
+    def __init__(self, directory, *, create=True):
         self.root = Path(directory)
-        self.root.mkdir(parents=True, exist_ok=True)
+        if create:
+            self.root.mkdir(parents=True, exist_ok=True)
 
     def location(self, stage, inputs, filename):
         identity = fingerprint({'version': 1, 'inputs': inputs,
-                                'implementation': digest_file(__file__)})
+                                'implementation': CACHE_IMPLEMENTATION_V1})
         directory = self.root / stage / identity
         return directory / filename, directory / 'complete.json'
 
     def lookup(self, stage, inputs, filename):
         path, manifest = self.location(stage, inputs, filename)
+        hit = self._verified_file(path, manifest, inputs)
+        if hit is not None:
+            return hit
+        # Earlier versions also salted their namespace with the module's source
+        # hash. Exact provenance + checksum + the caller's stage validator let
+        # those completed artifacts remain reusable without moving/deleting them.
+        for old_manifest in (self.root / stage).glob('*/complete.json'):
+            if old_manifest != manifest:
+                hit = self._verified_file(old_manifest.parent / filename, old_manifest, inputs)
+                if hit is not None:
+                    return hit
+        return None
+
+    @staticmethod
+    def _verified_file(path, manifest, inputs):
         try:
             record = json.loads(manifest.read_text(encoding='utf-8'))
             if (record['complete'] is True and record['inputs'] == inputs
@@ -208,8 +230,13 @@ class StageCache:
     def file(self, stage, inputs, filename, producer, validator):
         hit = self.lookup(stage, inputs, filename)
         if hit is not None:
-            print(f'Cache hit: {stage}: {filename}')
-            return hit
+            try:
+                validator(hit)
+            except (OSError, ValueError, KeyError, TypeError, EOFError, BadZipFile):
+                pass
+            else:
+                print(f'Cache hit: {stage}: {filename}')
+                return hit
         with tempfile.TemporaryDirectory(prefix=f'{stage}-', dir=self.root) as work:
             temporary = Path(work) / filename
             producer(temporary)
@@ -243,10 +270,11 @@ class StageCache:
                 result = read(hit)
                 print(f'Cache hit: {stage}')
                 return result
-            except (OSError, ValueError, KeyError):
+            except (OSError, ValueError, KeyError, EOFError, BadZipFile):
                 # An invalid archive must be recomputed, even with a valid checksum.
-                _, marker = self.location(stage, inputs, 'arrays.npz')
-                marker.unlink(missing_ok=True)
+                # file() revalidates hits before rebuilding. Keep the old
+                # manifest until a valid replacement is published atomically.
+                pass
         return read(self.file(stage, inputs, 'arrays.npz', produce, read))
 
 
@@ -291,33 +319,126 @@ def extract_idt(prepared, destination, image):
         shutil.copy2(output / f'{prepared.stem}-trajectory.npy', destination)
 
 
+def discover_videos(directory):
+    directory = Path(directory)
+    if not directory.is_dir():
+        return []
+    return sorted(path for path in directory.iterdir()
+                  if path.is_file() and path.suffix.lower() in VIDEO_SUFFIXES)
+
+
+def source_cases(project, videos=None):
+    """Select exact paths while retaining the historical directory case IDs."""
+    available = discover_videos(Path(project) / 'video_input')
+    sources = available if videos is None else [Path(path).resolve() for path in videos]
+    if not sources:
+        raise ValueError('No input videos selected or available')
+    if len(set(path.stem.casefold() for path in sources)) != len(sources):
+        raise ValueError('Input videos must have distinct stems (including case)')
+    ids = {path.resolve(): i for i, path in enumerate(available, 1)}
+    result = []
+    for source in sources:
+        if not source.is_file() or source.suffix.lower() not in VIDEO_SUFFIXES:
+            raise ValueError(f'Not a supported video file: {source}')
+        if source.resolve() not in ids:
+            ids[source.resolve()] = len(ids) + 1
+        result.append((ids[source.resolve()], source))
+    return result
+
+
+def preprocessing_inputs(project, source, case_id, settings):
+    return {'source': str(source.resolve()), 'sha256': digest_file(source),
+            'settings': list(settings), 'name': f'{case_id}_{source.stem}_reduced.avi',
+            'code': code_signature(project / 'toolbox' / 'preprocessing.py',
+                                   project / 'toolbox' / 'file_video_stream.py'),
+            'versions': {'opencv': cv2.__version__}}
+
+
+def idt_inputs_for(prepared, source_hash, signature):
+    return {'video': digest_file(prepared), 'source': source_hash,
+            'image_sources': signature, 'mode': 'raw', 'adjust_camera': True}
+
+
+def fv_inputs_for(project, raw):
+    return {'trajectories': digest_file(raw),
+            'code': code_signature(project / 'toolbox' / 'feature_extraction.py'),
+            'versions': package_versions('numpy', 'scikit-learn')}
+
+
+def feature_case(source, case_id, prepared, features, fv_inputs):
+    return {'features': features, 'video_path': str(prepared), 'case_id': case_id,
+            'video_name': source.stem, 'fv_signature': fingerprint(fv_inputs),
+            'fv_sha256': hashlib.sha256(features.tobytes()).hexdigest()}
+
+
+def finch_inputs_for(case, required, project):
+    return {'fv': case['fv_signature'], 'sha256': case['fv_sha256'],
+            'shape': list(case['features'].shape), 'required_cluster': required,
+            'tw_finch': True, 'code': code_signature(Path(project) / 'finch' / 'finch.py'),
+            'versions': package_versions('numpy', 'scikit-learn', 'scipy', 'pynndescent')}
+
+
+def inspect_video_cache(project, cache_directory, source, settings, required=None):
+    """Read-only verification using the same keys/validators as execution.
+
+    Never invokes a producer, removes a manifest or starts Docker. A downstream
+    stage is only usable when its complete dependency chain is verified.
+    """
+    project = Path(project)
+    cache = StageCache(cache_directory, create=False)
+    case_id, source = source_cases(project, [source])[0]
+    stages = {name: False for name in ('preprocessing', 'idt', 'fisher_vectors', 'finch')}
+    error = None
+    try:
+        pre = preprocessing_inputs(project, source, case_id, settings)
+        prepared = cache.lookup('preprocessing', pre, pre['name'])
+        if prepared is not None:
+            validate_preprocessed(prepared, video_info(source), settings)
+            stages['preprocessing'] = True
+            raw_inputs = idt_inputs_for(prepared, pre['sha256'], build_signature(project / 'IDT'))
+            raw = cache.lookup('idt', raw_inputs, f'{prepared.stem}-trajectory.npy')
+            if raw is not None:
+                validate_tracks(raw, int(video_info(prepared)['frames']))
+                stages['idt'] = True
+                fv_inputs = fv_inputs_for(project, raw)
+                fv = cache.lookup('fisher_vectors', fv_inputs, 'arrays.npz')
+                if fv is not None:
+                    with np.load(fv, allow_pickle=False) as archive:
+                        arrays = {key: archive[key] for key in archive.files}
+                    validate_fv(arrays, framewise_rows(raw))
+                    stages['fisher_vectors'] = True
+                    case = feature_case(source, case_id, prepared, arrays['features'], fv_inputs)
+                    partition = cache.lookup('finch', finch_inputs_for(case, required, project), 'arrays.npz')
+                    if partition is not None:
+                        with np.load(partition, allow_pickle=False) as archive:
+                            arrays = {key: archive[key] for key in archive.files}
+                        validate_finch(arrays, len(case['features']), required)
+                        stages['finch'] = True
+    except (OSError, ValueError, KeyError, TypeError, EOFError, BadZipFile) as exc:
+        error = str(exc)
+    status = 'Cached' if all(stages.values()) else ('Partial Cache' if any(stages.values()) else 'New')
+    return {'status': status, 'stages': stages, 'error': error}
+
+
 def prepare_features(project, cache_directory, reduce_video_size, settings,
                      extract_framewise_features, *, allow_idt=False,
-                     adopt_preprocessing=False, adopt_idt=False, rebuild=False):
+                     adopt_preprocessing=False, adopt_idt=False, rebuild=False,
+                     videos=None, progress=None):
     """Return exact per-input mappings and framewise FVs, without touching labels."""
     project = Path(project)
     cache = StageCache(cache_directory)
-    source_dir, idt = project / 'video_input', project / 'IDT'
-    sources = sorted(path for path in source_dir.iterdir()
-                     if path.is_file() and path.suffix.lower() in VIDEO_SUFFIXES)
-    if not sources:
-        raise ValueError(f'No input videos in {source_dir}')
-    stems = [path.stem.casefold() for path in sources]
-    if len(set(stems)) != len(stems):
-        raise ValueError('Input videos must have distinct stems (including case)')
+    idt = project / 'IDT'
+    sources = source_cases(project, videos)
+    report = progress or (lambda message: None)
     tables = descriptor_tables(idt / 'features')
     signature = build_signature(idt)
     image = None
     results = {}
-    for case_id, source in enumerate(sources, 1):
-        name = f'{case_id}_{source.stem}_reduced.avi'
-        source_hash = digest_file(source)
+    for case_id, source in sources:
+        report(f'Verifying preprocessing cache: {source.name}')
+        pre_inputs = preprocessing_inputs(project, source, case_id, settings)
+        name, source_hash = pre_inputs['name'], pre_inputs['sha256']
         source_metadata = video_info(source)
-        pre_inputs = {'source': str(source.resolve()), 'sha256': source_hash,
-                      'settings': list(settings), 'name': name,
-                      'code': code_signature(project / 'toolbox' / 'preprocessing.py',
-                                             project / 'toolbox' / 'file_video_stream.py'),
-                      'versions': {'opencv': cv2.__version__}}
 
         def preprocess(destination):
             legacy = idt / 'data' / name
@@ -328,6 +449,7 @@ def prepare_features(project, cache_directory, reduce_video_size, settings,
             else:
                 if not allow_idt:
                     raise CacheMiss(f'No legacy preprocessing file to adopt: {legacy}')
+                report(f'Preprocessing video: {source.name}')
                 reduce_video_size(str(source), str(destination.parent), case_id, source.stem)
 
         # Resuming without a valid preprocessing cache must be explicit as well.
@@ -343,10 +465,9 @@ def prepare_features(project, cache_directory, reduce_video_size, settings,
                 'global descriptors cannot replace framewise trajectories.')
         prepared = cache.file('preprocessing', pre_inputs, name, preprocess,
                               lambda path: validate_preprocessed(path, source_metadata, settings))
-        pre_hash = digest_file(prepared)
+        report(f'Preprocessing ready: {source.name}')
         frame_count = int(video_info(prepared)['frames'])
-        idt_inputs = {'video': pre_hash, 'source': source_hash, 'image_sources': signature,
-                      'mode': 'raw', 'adjust_camera': True}
+        idt_inputs = idt_inputs_for(prepared, source_hash, signature)
 
         def trajectories(destination):
             nonlocal image
@@ -366,37 +487,39 @@ def prepare_features(project, cache_directory, reduce_video_size, settings,
                     'Resume verified raw .npy output with --adopt-existing-idt, or explicitly '
                     'allow the missing extraction with --allow-idt. Existing CSVs are preserved.')
             if image is None:
+                report('Preparing Docker image for missing IDT extraction')
                 image = ensure_image(idt, signature, rebuild)
+            report(f'Extracting IDT trajectories: {source.name}')
             extract_idt(prepared, destination, image)
 
+        report(f'Verifying IDT cache: {source.name}')
         raw = cache.file('idt', idt_inputs, f'{prepared.stem}-trajectory.npy', trajectories,
                          lambda path: validate_tracks(path, frame_count))
-        fv_inputs = {'trajectories': digest_file(raw),
-                     'code': code_signature(project / 'toolbox' / 'feature_extraction.py'),
-                     'versions': package_versions('numpy', 'scikit-learn')}
+        report(f'IDT trajectories ready: {source.name}')
+        fv_inputs = fv_inputs_for(project, raw)
 
         def fisher_vectors():
+            report(f'Computing Fisher Vectors: {source.name}')
             with tempfile.TemporaryDirectory(prefix='fv-work-', dir=cache.root) as work:
                 return {'features': extract_framewise_features(str(raw), work)}
 
         expected_rows = framewise_rows(raw)
+        report(f'Verifying Fisher Vector cache: {source.name}')
         features = cache.arrays('fisher_vectors', fv_inputs, fisher_vectors,
                                 lambda data: validate_fv(data, expected_rows))['features']
         key = f'{case_id}-{source.stem}'
-        results[key] = {'features': features, 'video_path': str(prepared), 'case_id': case_id,
-                        'video_name': source.stem,
-                        'fv_signature': fingerprint(fv_inputs),
-                        'fv_sha256': hashlib.sha256(features.tobytes()).hexdigest()}
+        report(f'Fisher Vectors ready: {source.name}')
+        results[key] = feature_case(source, case_id, prepared, features, fv_inputs)
     return cache, results
 
 
-def cached_finch(cache, case, required, finch, project):
-    inputs = {'fv': case['fv_signature'], 'sha256': case['fv_sha256'],
-              'shape': list(case['features'].shape), 'required_cluster': required,
-              'tw_finch': True, 'code': code_signature(Path(project) / 'finch' / 'finch.py'),
-              'versions': package_versions('numpy', 'scikit-learn', 'scipy', 'pynndescent')}
+def cached_finch(cache, case, required, finch, project, *, progress=None):
+    inputs = finch_inputs_for(case, required, project)
+    report = progress or (lambda message: None)
+    report(f'Verifying FINCH cache: {case["video_name"]}')
 
     def produce():
+        report(f'Clustering with FINCH: {case["video_name"]}')
         c, counts, requested = finch(case['features'], req_clust=required, tw_finch=True)
         return {'c': np.asarray(c).reshape(len(case['features']), -1),
                 'num_clust': np.asarray(counts),
@@ -404,4 +527,5 @@ def cached_finch(cache, case, required, finch, project):
 
     arrays = cache.arrays('finch', inputs, produce,
                           lambda data: validate_finch(data, len(case['features']), required))
+    report(f'FINCH ready: {case["video_name"]}')
     return arrays['c'], arrays['num_clust'], None if required is None else arrays['req_c']

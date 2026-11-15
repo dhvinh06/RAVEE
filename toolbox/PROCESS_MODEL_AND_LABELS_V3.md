@@ -92,3 +92,48 @@ Nếu sau này muốn đánh giá **một segment** với Gemini thật, script
 `--start`/`--end` là frame của segment cần xem, và `--mode video` hoặc `frames`.
 Đây là một yêu cầu API thật và có thể tính phí; chưa chạy trong lần sửa này.
 Không cần chạy lại pipeline để thử một segment.
+
+
+## Segment-action scope and final human edits
+
+V3 names the specific visible operation in the target, rather than the broader
+process, scene or finished result. The prompt asks for the narrowest supported
+verb + object and target evidence supporting that exact action. Before/target/
+after media remain separate and chronological; a final text reminder re-anchors
+the answer to the original target and its actual supplied excerpt. No evaluation
+reference groups or activity keyword list are embedded in the prompt.
+
+For action labeling only, each context side is bounded by both the configured
+maximum and the target duration. For example, a one-second target gets at most
+one second of context per side. Task aggregation retains its wider context via
+`_context_windows`; clip extraction, long-target excerpt disclosure and fallback
+frames are otherwise unchanged. The five JSON fields, bow compatibility metadata,
+model selection, token limit and `suggest_activity()` API remain unchanged.
+
+A structural parser cannot prove that a confident label is semantically correct.
+Model accuracy, including context dominance on a particular video, still needs
+live evaluation. Human review remains required. V3 suggestions are session-local
+in `gui_elements.py`, separate from committed `LABEL` values; no production V3
+label-response disk cache was found.
+
+Finish now checks both missing labels and saved-label/draft differences. Revisiting
+an earlier segment, editing its text, then finishing another segment redirects to
+the uncommitted edit instead of silently exporting its old committed text. Each
+edit still needs explicit Commit. `main.py` snapshots the committed dictionary;
+`extractLog()` writes these strings as `activity`; aggregation consumes that
+reviewed field. Suggestions do not overwrite it asynchronously.
+
+Aggregation boundary keys and confirmed-review identities already include reviewed
+activities, segment bounds/times and video identity. Label changes cannot reuse
+incompatible boundaries, even as refresh fallbacks. No cache schema change was
+needed, and label edits themselves never request Gemini or delete cache files.
+The existing boundary key also fingerprints all encoder-module source: this V3
+code update changes that fingerprint, conservatively leaving older boundary
+entries unmatched. They remain on disk. Only an explicit Suggest/Refresh request
+can generate new entries; a warm cache with unchanged current inputs is reused.
+
+Focused offline checks:
+
+```powershell
+python -B -m unittest tests.test_review_preview_and_label_accuracy -v
+```
