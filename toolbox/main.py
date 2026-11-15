@@ -1,6 +1,5 @@
 import os
-import shutil
-import subprocess
+import argparse
 import time
 
 import cv2
@@ -11,8 +10,9 @@ from moviepy.video.io.VideoFileClip import VideoFileClip
 
 from finch.finch import FINCH
 from gui import gui_elements
-from preprocessing import reduce_video_size
+from preprocessing import reduce_video_size, FPS_RESIZE, WIDTH_RESIZE, HEIGHT_RESIZE
 from feature_extraction import extract_framewise_features
+from pipeline_cache import prepare_features, cached_finch
 from display_video_snippets import run_snippets
 from event_log_creation import (
     createDF,
@@ -27,61 +27,37 @@ from event_log_creation import (
 # -----------------------------------------------------------------------------
 # Directories for runtime
 # -----------------------------------------------------------------------------
-# Current working directory. Keep the same working-directory setting that
-# was used by the original RAVEE run, because its paths are relative to it.
-currentDirectory = os.getcwd()
-
-# System-specific separator
-seperator = str(os.path.sep)
+# Resolve runtime paths from this file so launching from another directory works.
+projectDirectory = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Directory of IDT feature extraction
-# Keep the original repository's directory layout assumptions.
-targetIDT = os.path.abspath(
-    os.path.join(currentDirectory, os.pardir, "IDT")
-)
+targetIDT = os.path.join(projectDirectory, "IDT")
 
 # Video input directory
-raw_video_input = os.path.abspath(
-    os.path.join(currentDirectory, os.pardir, "video_input")
-)
+raw_video_input = os.path.join(projectDirectory, "video_input")
 
 # Processed video output
-processedVideoOutput = os.path.abspath(
-    os.path.join(currentDirectory, os.pardir, "IDT", "data")
-)
+processedVideoOutput = os.path.join(targetIDT, "data")
 
 # IDT output
-idtOutput = os.path.abspath(
-    os.path.join(currentDirectory, os.pardir, "IDT", "features")
-)
+idtOutput = os.path.join(targetIDT, "features")
 
 # Fisher Vector output
-fvOutput = os.path.abspath(
-    os.path.join(currentDirectory, os.pardir, "finch", "input")
-)
+fvOutput = os.path.join(projectDirectory, "finch", "input")
 
 # FINCH output
-finchOutput = os.path.abspath(
-    os.path.join(currentDirectory, os.pardir, "finch", "output")
-)
+finchOutput = os.path.join(projectDirectory, "finch", "output")
 
 # Demo files
-demoPath = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "DemoFiles"
-)
+demoPath = os.path.join(projectDirectory, "DemoFiles")
 # Event-log output for normal (non-demo) processing
-eventlogOutput = os.path.abspath(
-    os.path.join(currentDirectory, os.pardir, "EventLog_Output")
-)
+eventlogOutput = os.path.join(projectDirectory, "EventLog_Output")
 
 # Event-log output for DemoFiles
 eventlogOutputDemo = demoPath
 
 # Temporary directory to cache results if necessary
-tempDirectoryPath = os.path.abspath(
-    os.path.join(currentDirectory, os.pardir, "temp")
-)
+tempDirectoryPath = os.path.join(projectDirectory, "temp")
 
 
 # -----------------------------------------------------------------------------
@@ -139,7 +115,7 @@ def export_two_event_logs(detailed_df, task_df, output_dir, base_name):
 # -----------------------------------------------------------------------------
 # Main pipeline
 # -----------------------------------------------------------------------------
-def main():
+def main(*, allow_idt=False, adopt_preprocessing=False, adopt_idt=False, rebuild=False):
     global CASEID
 
     if DEMO:
@@ -200,76 +176,19 @@ def main():
         os.makedirs(finchOutput, exist_ok=True)
         os.makedirs(eventlogOutput, exist_ok=True)
 
-        # Preprocess all input videos.
-        input_videos = sorted(os.listdir(raw_video_input))
-
-        for count, value in enumerate(input_videos):
-            file_path = os.path.join(raw_video_input, value)
-            video_name = os.path.splitext(os.path.basename(file_path))[0]
-
-            caseID = CASEID
-            CASEID += 1
-
-            # As in the original RAVEE implementation, resize/downsample
-            # videos before extracting Improved Dense Trajectories.
-            reduce_video_size(
-                file_path,
-                processedVideoOutput,
-                caseID,
-                video_name,
-            )
-
-            print(f"Completed preprocessing: {value}")
-
-            if (count + 1) % 10 == 0:
-                print(f"{count + 1} files were completed.")
-
-        # ---------------------------------------------------------------------
-        # Improved Dense Trajectories (IDT)
-        # ---------------------------------------------------------------------
-        original_cwd = os.getcwd()
-        try:
-            os.chdir(targetIDT)
-            subprocess.run("docker build -t idt .", shell=True, check=True)
-            subprocess.run(
-                "docker run -v "
-                + targetIDT
-                + seperator
-                + "features:/densetrack/features idt",
-                shell=True,
-                check=True,
-                )
-        finally:
-            os.chdir(original_cwd)
-
-        # ---------------------------------------------------------------------
-        # Feature extraction: compute framewise Fisher Vectors.
-        # ---------------------------------------------------------------------
-        compFV = {}
-
-        for count, value in enumerate(sorted(os.listdir(idtOutput))):
-            file_path = os.path.join(idtOutput, value)
-            nameFV = os.path.splitext(os.path.basename(file_path))[0]
-
-            print("NameFV", nameFV)
-
-            caseNr = int(nameFV.split("_")[0])
-            print("CaseNr", caseNr)
-
-            videoNameList = nameFV.split("_")[1:-1]
-            print("VideoName", videoNameList)
-
-            videoName = "_".join(videoNameList)
-            key = str(caseNr) + "-" + videoName
-            print("key", key)
-
-            features = extract_framewise_features(file_path, fvOutput)
-            compFV[key] = features
-
-            print(f"Completed feature extraction: {value}")
-
-            if (count + 1) % 10 == 0:
-                print(f"{count + 1} files were completed.")
+        # Keep video identity explicit. CSV names identify descriptor channels;
+        # their named rows contain one global FV per video, not framewise data.
+        cache, cases = prepare_features(
+            projectDirectory,
+            os.path.join(tempDirectoryPath, "pipeline_cache"),
+            reduce_video_size,
+            (FPS_RESIZE, WIDTH_RESIZE, HEIGHT_RESIZE),
+            extract_framewise_features,
+            allow_idt=allow_idt,
+            adopt_preprocessing=adopt_preprocessing,
+            adopt_idt=adopt_idt,
+            rebuild=rebuild,
+        )
 
         # Separate aggregate dataframes for detailed and task-level logs.
         eventlog_detailed = createDF()
@@ -278,21 +197,12 @@ def main():
         # ---------------------------------------------------------------------
         # FINCH clustering, manual labeling, and event-log extraction.
         # ---------------------------------------------------------------------
-        for count, (key, value) in enumerate(compFV.items()):
+        for count, (key, case) in enumerate(cases.items()):
             start = time.time()
 
-            if required_cluster is not None:
-                c, num_clust, req_c = FINCH(
-                    value,
-                    req_clust=required_cluster,
-                    tw_finch=True,
-                )
-            else:
-                c, num_clust, req_c = FINCH(
-                    value,
-                    req_clust=None,
-                    tw_finch=True,
-                )
+            c, num_clust, req_c = cached_finch(
+                cache, case, required_cluster, FINCH, projectDirectory,
+            )
 
             print(
                 "Time Elapsed: {:2.2f} seconds".format(
@@ -301,8 +211,8 @@ def main():
             )
 
             # Save FINCH results.
-            name = key.split("-")[1]
-            keyNr = key.split("-")[0]
+            name = case['video_name']
+            keyNr = str(case['case_id'])
 
             print("Writing back the results on the provided path ...")
 
@@ -327,23 +237,9 @@ def main():
                     fmt="%d",
                 )
 
-            # Find the preprocessed video corresponding to this case ID.
-            video_path_name = None
-            for processed_name in os.listdir(processedVideoOutput):
-                key_video_name = processed_name.split("_")[0]
-                if keyNr == key_video_name:
-                    video_path_name = processed_name
-                    break
-
-            if video_path_name is None:
-                raise FileNotFoundError(
-                    f"Could not find processed video for case ID {keyNr}"
-                )
-
-            video_path = os.path.join(
-                processedVideoOutput,
-                video_path_name,
-            )
+            # Use this input's exact cached video, never a stale case-ID match.
+            video_path = case['video_path']
+            video_path_name = os.path.basename(video_path)
             print(video_path)
 
             # Run the original RAVEE manual labeling interface.
@@ -407,26 +303,20 @@ def main():
             )
         )
 
-        # ---------------------------------------------------------------------
-        # Cleanup, preserving the original RAVEE behavior.
-        # ---------------------------------------------------------------------
-        for directory in (idtOutput, fvOutput, processedVideoOutput):
-            if not os.path.isdir(directory):
-                continue
-
-            for filename in os.listdir(directory):
-                file_path = os.path.join(directory, filename)
-                try:
-                    if os.path.isfile(file_path) or os.path.islink(file_path):
-                        os.unlink(file_path)
-                    elif os.path.isdir(file_path):
-                        shutil.rmtree(file_path)
-                except Exception as error:
-                    print(
-                        "Failed to delete %s. Reason: %s"
-                        % (file_path, error)
-                    )
+        # Preserve completed stage caches and all original input/IDT files.
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="RAVEE with validated per-input stage caches")
+    parser.add_argument('--allow-idt', action='store_true',
+                        help='Allow Docker extraction when a raw IDT cache is missing')
+    parser.add_argument('--adopt-existing-preprocessing', action='store_true',
+                        help='Validate and cache matching legacy IDT/data videos')
+    parser.add_argument('--adopt-existing-idt', action='store_true',
+                        help='Validate and cache matching legacy raw trajectory .npy files')
+    parser.add_argument('--rebuild-idt', action='store_true',
+                        help='Force image rebuild if Docker extraction is needed')
+    args = parser.parse_args()
+    main(allow_idt=args.allow_idt,
+         adopt_preprocessing=args.adopt_existing_preprocessing,
+         adopt_idt=args.adopt_existing_idt, rebuild=args.rebuild_idt)

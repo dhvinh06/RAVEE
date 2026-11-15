@@ -18,6 +18,10 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parent / ".env")
 
 # Keep each inline request reasonably small. Files API is intentionally not
 # required: short clips avoid the prior upload/processing wait.

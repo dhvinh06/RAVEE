@@ -1,0 +1,13 @@
+# API keys
+.env
+
+# Python environment
+.venv/
+__pycache__/
+*.pyc
+
+# IntelliJ
+.idea/
+
+# RAVEE generated cache
+temp/pipeline_cache/

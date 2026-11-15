@@ -71,17 +71,17 @@ def read_descriptors(descriptors, index, gmm):
     """
     if index == 'all':
         # get all the descriptors & concatenate them to a 426dim array (see: https://hildekuehne.github.io/projects/end2end/kuehne_wacv16.pdf)
-        trajectories = np.array([descriptors[i][-6] for i in
+        trajectories = np.array([descriptors[i]['trajectory'] for i in
                                  range(descriptors.shape[0])])
         num_desc = descriptors.shape[0]
         trajectories_reshape = trajectories.reshape(num_desc, 30)
-        hog_descriptors = np.array([descriptors[i][-5] for i in
+        hog_descriptors = np.array([descriptors[i]['hog'] for i in
                                     range(descriptors.shape[0])])
-        hof_descriptor = np.array([descriptors[i][-4] for i in
+        hof_descriptor = np.array([descriptors[i]['hof'] for i in
                                    range(descriptors.shape[0])])
-        mbh_x_descriptors = np.array([descriptors[i][-3] for i in
+        mbh_x_descriptors = np.array([descriptors[i]['mbh_x'] for i in
                                       range(descriptors.shape[0])])
-        mbh_y_descriptors = np.array([descriptors[i][-2] for i in
+        mbh_y_descriptors = np.array([descriptors[i]['mbh_y'] for i in
                                       range(descriptors.shape[0])])
         combine = np.concatenate((trajectories_reshape, hog_descriptors), axis=1)
         combine = np.concatenate((combine, hof_descriptor), axis=1)
@@ -89,16 +89,16 @@ def read_descriptors(descriptors, index, gmm):
         combine = np.concatenate((combine, mbh_y_descriptors), axis=1)
     else:
         #get the descriptors from the index list and concatenate them to an 426 dim array
-        trajectories = np.array([descriptors[index[i]][-6] for i in
+        trajectories = np.array([descriptors[index[i]]['trajectory'] for i in
                                  range(len(index))])
         trajectories_reshape = trajectories.reshape(len(index),30)
-        hog_descriptors = np.array([descriptors[index[i]][-5] for i in
+        hog_descriptors = np.array([descriptors[index[i]]['hog'] for i in
                                  range(len(index))])
-        hof_descriptor = np.array([descriptors[index[i]][-4] for i in
+        hof_descriptor = np.array([descriptors[index[i]]['hof'] for i in
                                     range(len(index))])
-        mbh_x_descriptors = np.array([descriptors[index[i]][-3] for i in
+        mbh_x_descriptors = np.array([descriptors[index[i]]['mbh_x'] for i in
                                     range(len(index))])
-        mbh_y_descriptors = np.array([descriptors[index[i]][-2] for i in
+        mbh_y_descriptors = np.array([descriptors[index[i]]['mbh_y'] for i in
                                     range(len(index))])
         combine = np.concatenate((trajectories_reshape, hog_descriptors), axis=1)
         combine = np.concatenate((combine, hof_descriptor), axis=1)
@@ -206,7 +206,7 @@ def extract_framewise_features(input_path, outputPath):
     # each value is the index of the descriptors, which describe said frame
     dict_desc = {}
     for index in range(tracks.shape[0]):
-        end_frame = tracks[index][0]
+        end_frame = int(np.asarray(tracks[index]['frame_num']).item())
         frame_range = range(int(end_frame - 14), int(end_frame + 1))
         for j in frame_range:
             if j in dict_desc:
