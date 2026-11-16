@@ -174,10 +174,16 @@ python -B -m unittest discover -s tests -t . -v
 ```
 
 The suite mocks Gemini, Docker, IDT, feature extraction, FINCH and Graphviz execution.
-Some integration tests read existing local logs or cached-video metadata; an
-optional local fixture can be skipped when unavailable or unreadable. The import
+Regression serialization uses deterministic synthetic logs. Two checks reading
+existing local logs or cached-video metadata require the explicit
+`RAVEE_RUN_LOCAL_INTEGRATION=1` opt-in and are skipped by default. The `tests`
+package isolates real dotenv/credentials, blocks unmocked Gemini clients and
+protects production caches from writes. The import
 check uses a fresh process and blocks application network, GUI, video and external
 process work. Do not use repository-root test discovery to run the opt-in experiments.
+
+See [the environment record and test isolation contract](docs/REPRODUCIBILITY.md)
+for verified package versions, remaining portability limits and local check details.
 
 Run an individual suite with its package name, for example:
 

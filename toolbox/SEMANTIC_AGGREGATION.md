@@ -18,11 +18,12 @@ không tự quyết định nhóm semantic. Nhánh review giữ mọi segment, k
 
 ## Đề xuất Gemini
 
-Màn hình ban đầu giữ từng segment riêng. **Chỉ khi bấm Suggest task groups
-(Gemini) và đồng ý gửi dữ liệu** mới gọi API. Client chạy trong worker thread,
-giữ cách lấy `GOOGLE_API_KEY`/`GEMINI_API_KEY`, `.env`, `GEMINI_MODEL`, HTTP
-timeout và video/frames mode hiện có của V3. Thiếu key/lỗi API/JSON sai không
-làm mất các nhóm đang chỉnh; người dùng tiếp tục review thủ công.
+The review starts from singleton segments. Gemini is called only after an
+explicit **Suggest task groups** action and confirmation. Requests run on a worker;
+Tk widgets are updated through the UI queue. `GEMINI_LABEL_MODEL` selects the
+individual/batch label model, and `GEMINI_AGGREGATION_MODEL` selects the task model.
+Each falls back to `GEMINI_MODEL` and then the existing code default. Missing keys,
+API failures or invalid JSON preserve the current human review.
 
 Gemini nhận ID segment, nhãn hiện có đã được người dùng review, frame, timestamps,
 duration và media tương ứng từng segment, cùng ngữ cảnh trước/sau. Nếu detailed
@@ -44,20 +45,50 @@ Khi toàn bộ boundary cache còn trống và dịch vụ không lỗi, số re
 `ceil((N - 1) / 11)` với N segment; N=1 không cần API. Cache hợp lệ được bỏ qua
 trước khi encode media hoặc tạo client. Không có request khi chỉ mở review.
 
+## Intermediate objectives and human review
+
+An activity segment records an atomic action. A task groups adjacent phases
+serving the same observable intermediate result, such as preparation, execution,
+retry, correction, inspection and refinement. A shared object or broad process
+goal alone is insufficient to merge distinct intermediate results. Boundary
+responses report `objective_before`, `objective_after`, `objective_transition`,
+`objective_scope` and `transition_evidence`. Uncertain/contradictory evidence stays
+available for human review. Merge, split, rename, Undo and explicit confirmation
+remain authoritative; neither model suggestions nor matching verbs auto-confirm
+an event log. The reviewed segment labels and FINCH bounds remain unchanged.
+
 ## Độ tin cậy API và tiếp tục sau lỗi
 
-Model đang cấu hình là `gemini-3.5-flash-lite`, vẫn lấy từ `GEMINI_MODEL` và
-key/.env như V3. Mọi request aggregation chạy tuần tự dưới một lock dùng chung;
-GUI vẫn dùng worker thread và chỉ cập nhật widget trên Tkinter event loop qua
-queue. Tiến độ hiển thị `Checking boundary 4/10`, thông báo retry và số boundary
-được tái sử dụng/chưa giải quyết.
+Aggregation uses `gemini_runtime.py` for model selection, credentials, client
+creation and retry classification. `GEMINI_ACTIVE_KEY` selects a configured
+numeric/named credential; without it, the legacy GOOGLE_API_KEY/GEMINI_API_KEY
+precedence applies. A GUI credential selection applies to subsequent AI stages
+in the application session without rewriting `.env`. No model/key fallback is
+automatic. Aggregation requests remain sequential under the shared lock, with
+progress such as `Checking boundary 4/10` and reused/unresolved counts.
 
-Các HTTP 429, 500, 502, 503, 504 có tối đa **4 attempts** (3 retries), full jitter
-với cửa sổ backoff 1/2/4 giây. `Retry-After` hỗ trợ số giây và HTTP date; không
-retry sớm hơn chỉ dẫn này. Tổng thời gian chờ backoff tối đa 60 giây; nếu header
-yêu cầu chờ lâu hơn thì dừng lần yêu cầu đó để thử lại sau, thay vì retry sớm.
-HTTP timeout vẫn 60 giây mỗi attempt. Retry ngầm của SDK bị tắt để giới hạn này
-không nhân lên. Các lỗi khác và JSON sai không được retry tự động.
+| Failure | Actual behavior |
+| --- | --- |
+| HTTP 500/502/503/504 | Temporary service failure; at most four attempts |
+| HTTP 429 with RPM/TPM evidence | Temporary rate limit; same bounded retry policy |
+| Confirmed requests-per-day exhaustion | No automatic retry/rotation; show the existing nonmodal recovery dialog |
+| Ambiguous HTTP 429 | Stop; do not claim daily exhaustion or assume a temporary rate limit |
+| HTTP 401/403 | Stop; report authentication/permission failure |
+| Invalid JSON/schema/evidence | Stop; do not fabricate or automatically retry a response |
+
+Transient retries use full jitter with 1/2/4-second windows. `Retry-After`
+(seconds or HTTP date) is respected, with at most 60 seconds total backoff and
+60 seconds timeout per attempt. SDK retries are disabled. Daily quota evidence
+remains nonretryable even if the response also contains retry guidance.
+
+For confirmed daily exhaustion, **Continue manually** disables further AI
+requests for the review, **Select credential** explicitly resumes the pending
+request using another configured authorized credential, and **Cancel** stops
+that request without discarding review. Keys in one project share its limits.
+Clients are recreated on an explicit switch; completed cached boundaries and
+human edits are preserved. Recovered task proposals require an explicit load,
+review and confirmation; they never silently replace edits made while paused.
+See [shared configuration and recovery](../docs/GEMINI_CONFIGURATION_AND_TASK_OBJECTIVES.md).
 
 Mỗi boundary thành công được ghi atomic riêng tại `temp/semantic_boundary_cache`,
 có completion marker và checksum. Khóa cache gồm đường dẫn + SHA-256 nội dung

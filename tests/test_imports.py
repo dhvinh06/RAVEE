@@ -18,6 +18,7 @@ class ImportTests(unittest.TestCase):
             import sys
             from pathlib import Path
             from unittest.mock import patch
+            import tests  # Install fake credentials, dotenv isolation and SDK guard first.
 
             sys.path.insert(0, str(Path.cwd() / 'toolbox'))
             # Load third-party dependencies first: their platform detection may

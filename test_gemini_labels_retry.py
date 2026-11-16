@@ -1,11 +1,16 @@
 """Prototype: open-vocabulary activity labeling with Gemini video understanding.
 
 Run from the RAVEE project root:
-    python .\\test_gemini_labels.py
+    python .\\test_gemini_labels_retry.py --allow-upload
+    python .\\test_gemini_labels_retry.py --reuse-file files/<id>
 
 Set GEMINI_API_KEY in the environment before running. The script uploads the
 video temporarily through Gemini Files API, asks the model to describe each
 FINCH segment using the complete video as context, then saves the raw response.
+This is a standalone Interactions/Files API research prototype with fixed demo
+boundaries and its own --model option. Production Suggest All lives in
+batch_label_suggester.py and uses GenerateContent, current GUI boundaries,
+validated structured responses and a separate inline-video batch cache.
 """
 
 from __future__ import annotations

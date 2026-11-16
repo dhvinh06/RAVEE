@@ -127,10 +127,14 @@ Aggregation boundary keys and confirmed-review identities already include review
 activities, segment bounds/times and video identity. Label changes cannot reuse
 incompatible boundaries, even as refresh fallbacks. No cache schema change was
 needed, and label edits themselves never request Gemini or delete cache files.
-The existing boundary key also fingerprints all encoder-module source: this V3
-code update changes that fingerprint, conservatively leaving older boundary
-entries unmatched. They remain on disk. Only an explicit Suggest/Refresh request
-can generate new entries; a warm cache with unchanged current inputs is reused.
+The boundary key uses explicit `_BOUNDARY_IMPLEMENTATION_SIGNATURE` and
+`AGGREGATION_ENCODER_SIGNATURE` values, alongside video content/path identity,
+reviewed records, frame bounds, model, prompt, actual generation configuration,
+batch size and media/context settings. It does not hash the whole V3 module.
+Signature bumps are required when the corresponding encoding/grouping semantics
+change; unrelated recovery/documentation changes retain those signatures. Existing
+entries remain on disk. Only an explicit Suggest/Refresh request can generate new
+entries; a warm cache with unchanged current inputs is reused.
 
 Focused offline checks:
 
@@ -187,9 +191,10 @@ No automatic retries of malformed responses, model switches or evidence fabricat
 were introduced. Supported syntax/types do not guarantee semantic accuracy.
 
 Caches, aggregation, human review and the IDT subsystem were not modified by this
-fix. Existing model-specific cache separation remains. As already documented, the
-boundary key fingerprints V3 source, so this code update changes that conservative
-fingerprint while preserving old files; requests remain explicit.
+fix. Existing model-specific cache separation remains: the actual generation
+configuration and explicit implementation/encoder signatures participate in the
+boundary key. A changed generation contract creates a distinct key; changing
+credentials alone does not. Old files are preserved and requests remain explicit.
 
 Official references checked for this implementation:
 

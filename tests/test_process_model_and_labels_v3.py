@@ -12,6 +12,7 @@ import tempfile
 from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
+from tests.offline_support import detailed_events
 
 import cv2
 
@@ -121,11 +122,24 @@ class ProcessModelTests(unittest.TestCase):
         self.assertIn('bad event log', self.stderr.getvalue())
         self.assert_logs_unchanged()
 
+    @unittest.skipUnless(os.getenv('RAVEE_RUN_LOCAL_INTEGRATION') == '1',
+                         'Local artifacts are opt-in; use RAVEE_RUN_LOCAL_INTEGRATION=1')
     def test_existing_cached_xes_can_be_rendered_without_pipeline(self):
         # Read one existing event log locally; process discovery/render stay mocked.
         path = ROOT / 'EventLog_Output' / 'all_videos_task_eventlog.xes'
         if not path.exists():
             self.skipTest('User event-log cache is not present')
+        checksum = hashlib.sha256(path.read_bytes()).hexdigest()
+        self.read_xes.side_effect = READ_EXISTING_XES
+        with patch.object(events.subprocess, 'run', side_effect=self.render):
+            result = events.showProcessModel(path, output_dir=self.root)
+        self.read_xes.assert_called_once_with(str(path))
+        self.assertEqual(set(result), {'png', 'svg'})
+        self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), checksum)
+
+    def test_fixture_xes_can_be_rendered_without_pipeline(self):
+        events.exportXES(detailed_events(), 'synthetic_task', self.root)
+        path = self.root / 'synthetic_task_eventlog.xes'
         checksum = hashlib.sha256(path.read_bytes()).hexdigest()
         self.read_xes.side_effect = READ_EXISTING_XES
         with patch.object(events.subprocess, 'run', side_effect=self.render):
@@ -165,6 +179,8 @@ class ContextTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 suggester._context_windows('cached.avi', 1, 1539)
 
+    @unittest.skipUnless(os.getenv('RAVEE_RUN_LOCAL_INTEGRATION') == '1',
+                         'Local artifacts are opt-in; use RAVEE_RUN_LOCAL_INTEGRATION=1')
     def test_existing_cached_video_uses_only_metadata_and_no_api(self):
         videos = list((ROOT / 'temp' / 'pipeline_cache' / 'preprocessing').glob('*/*.avi'))
         if not videos:
@@ -180,6 +196,17 @@ class ContextTests(unittest.TestCase):
         self.assertGreater(fps, 0)
         self.assertIn(('TARGET SEGMENT', 90, 149), windows)
         self.assertTrue(all(start >= 0 and end >= start for _, start, end in windows))
+        client.assert_not_called()
+
+    def test_deterministic_video_metadata_without_reading_a_research_video(self):
+        cap = capture(frames=1539, fps=15)
+        with patch.object(genai, 'Client') as client, patch.object(suggester.cv2, 'VideoCapture', return_value=cap):
+            fps, windows = suggester._context_windows('synthetic.avi', 90, 149)
+        self.assertEqual(fps, 15)
+        self.assertIn(('TARGET SEGMENT', 90, 149), windows)
+        self.assertTrue(all(start >= 0 and end >= start for _, start, end in windows))
+        cap.read.assert_not_called()
+        cap.release.assert_called_once()
         client.assert_not_called()
 
 
