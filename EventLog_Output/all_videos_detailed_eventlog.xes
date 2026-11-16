@@ -1,173 +1,308 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <log xes.version="1849-2016" xes.features="nested-attributes" xmlns="http://www.xes-standard.org/">
-	<extension name="Concept" prefix="concept" uri="http://www.xes-standard.org/concept.xesext" />
 	<extension name="Time" prefix="time" uri="http://www.xes-standard.org/time.xesext" />
+	<extension name="Concept" prefix="concept" uri="http://www.xes-standard.org/concept.xesext" />
 	<string key="origin" value="csv" />
 	<trace>
-		<string key="concept:name" value="1" />
+		<string key="concept:name" value="2" />
 		<event>
-			<int key="videoID" value="1" />
+			<int key="videoID" value="2" />
 			<int key="segment_id" value="1" />
 			<int key="cluster_id" value="0" />
-			<string key="activity" value="Tie ribbon bow" />
+			<string key="activity" value="Show dosing ring and attach cup" />
 			<int key="frame_start" value="0" />
-			<int key="frame_end" value="121" />
-			<date key="timestamp_start" value="2026-11-16T10:16:11+00:00" />
-			<date key="timestamp_end" value="2026-11-16T10:16:19.133333+00:00" />
-			<float key="duration_seconds" value="8.133333333333333" />
-			<string key="concept:name" value="Tie ribbon bow" />
-			<date key="time:timestamp" value="2026-11-16T10:16:11+00:00" />
+			<int key="frame_end" value="142" />
+			<date key="timestamp_start" value="2026-11-16T19:25:00+00:00" />
+			<date key="timestamp_end" value="2026-11-16T19:25:09.533333+00:00" />
+			<float key="duration_seconds" value="9.533333333333333" />
+			<string key="concept:name" value="Show dosing ring and attach cup" />
+			<date key="time:timestamp" value="2026-11-16T19:25:00+00:00" />
 			<int key="@@index" value="0" />
 			<int key="@@case_index" value="0" />
 		</event>
 		<event>
-			<int key="videoID" value="1" />
+			<int key="videoID" value="2" />
 			<int key="segment_id" value="2" />
 			<int key="cluster_id" value="1" />
-			<string key="activity" value="Fold wrapping paper" />
-			<int key="frame_start" value="122" />
-			<int key="frame_end" value="154" />
-			<date key="timestamp_start" value="2026-11-16T10:16:19.133333+00:00" />
-			<date key="timestamp_end" value="2026-11-16T10:16:21.333333+00:00" />
-			<float key="duration_seconds" value="2.2" />
-			<string key="concept:name" value="Fold wrapping paper" />
-			<date key="time:timestamp" value="2026-11-16T10:16:19.133333+00:00" />
+			<string key="activity" value="Tap and remove dosing cup" />
+			<int key="frame_start" value="143" />
+			<int key="frame_end" value="224" />
+			<date key="timestamp_start" value="2026-11-16T19:25:09.533333+00:00" />
+			<date key="timestamp_end" value="2026-11-16T19:25:15+00:00" />
+			<float key="duration_seconds" value="5.466666666666667" />
+			<string key="concept:name" value="Tap and remove dosing cup" />
+			<date key="time:timestamp" value="2026-11-16T19:25:09.533333+00:00" />
 			<int key="@@index" value="1" />
 			<int key="@@case_index" value="0" />
 		</event>
 		<event>
-			<int key="videoID" value="1" />
+			<int key="videoID" value="2" />
 			<int key="segment_id" value="3" />
-			<int key="cluster_id" value="0" />
-			<string key="activity" value="Fold wrapping paper" />
-			<int key="frame_start" value="155" />
-			<int key="frame_end" value="198" />
-			<date key="timestamp_start" value="2026-11-16T10:16:21.333333+00:00" />
-			<date key="timestamp_end" value="2026-11-16T10:16:24.266667+00:00" />
-			<float key="duration_seconds" value="2.933333333333333" />
-			<string key="concept:name" value="Fold wrapping paper" />
-			<date key="time:timestamp" value="2026-11-16T10:16:21.333333+00:00" />
+			<int key="cluster_id" value="2" />
+			<string key="activity" value="Set down dosing cup" />
+			<int key="frame_start" value="225" />
+			<int key="frame_end" value="328" />
+			<date key="timestamp_start" value="2026-11-16T19:25:15+00:00" />
+			<date key="timestamp_end" value="2026-11-16T19:25:21.933333+00:00" />
+			<float key="duration_seconds" value="6.933333333333334" />
+			<string key="concept:name" value="Set down dosing cup" />
+			<date key="time:timestamp" value="2026-11-16T19:25:15+00:00" />
 			<int key="@@index" value="2" />
 			<int key="@@case_index" value="0" />
 		</event>
 		<event>
-			<int key="videoID" value="1" />
+			<int key="videoID" value="2" />
 			<int key="segment_id" value="4" />
-			<int key="cluster_id" value="1" />
-			<string key="activity" value="Fold wrapping paper" />
-			<int key="frame_start" value="199" />
-			<int key="frame_end" value="219" />
-			<date key="timestamp_start" value="2026-11-16T10:16:24.266667+00:00" />
-			<date key="timestamp_end" value="2026-11-16T10:16:25.666667+00:00" />
-			<float key="duration_seconds" value="1.4" />
-			<string key="concept:name" value="Fold wrapping paper" />
-			<date key="time:timestamp" value="2026-11-16T10:16:24.266667+00:00" />
+			<int key="cluster_id" value="3" />
+			<string key="activity" value="hold dosing ring on portafilter" />
+			<int key="frame_start" value="329" />
+			<int key="frame_end" value="380" />
+			<date key="timestamp_start" value="2026-11-16T19:25:21.933333+00:00" />
+			<date key="timestamp_end" value="2026-11-16T19:25:25.400000+00:00" />
+			<float key="duration_seconds" value="3.466666666666667" />
+			<string key="concept:name" value="hold dosing ring on portafilter" />
+			<date key="time:timestamp" value="2026-11-16T19:25:21.933333+00:00" />
 			<int key="@@index" value="3" />
 			<int key="@@case_index" value="0" />
 		</event>
 		<event>
-			<int key="videoID" value="1" />
+			<int key="videoID" value="2" />
 			<int key="segment_id" value="5" />
-			<int key="cluster_id" value="0" />
-			<string key="activity" value="Tie ribbon bow" />
-			<int key="frame_start" value="220" />
-			<int key="frame_end" value="351" />
-			<date key="timestamp_start" value="2026-11-16T10:16:25.666667+00:00" />
-			<date key="timestamp_end" value="2026-11-16T10:16:34.466667+00:00" />
-			<float key="duration_seconds" value="8.8" />
-			<string key="concept:name" value="Tie ribbon bow" />
-			<date key="time:timestamp" value="2026-11-16T10:16:25.666667+00:00" />
+			<int key="cluster_id" value="4" />
+			<string key="activity" value="Hold portafilter and dosing ring then shaking" />
+			<int key="frame_start" value="381" />
+			<int key="frame_end" value="401" />
+			<date key="timestamp_start" value="2026-11-16T19:25:25.400000+00:00" />
+			<date key="timestamp_end" value="2026-11-16T19:25:26.800000+00:00" />
+			<float key="duration_seconds" value="1.4" />
+			<string key="concept:name" value="Hold portafilter and dosing ring then shaking" />
+			<date key="time:timestamp" value="2026-11-16T19:25:25.400000+00:00" />
 			<int key="@@index" value="4" />
 			<int key="@@case_index" value="0" />
 		</event>
 		<event>
-			<int key="videoID" value="1" />
+			<int key="videoID" value="2" />
 			<int key="segment_id" value="6" />
-			<int key="cluster_id" value="1" />
-			<string key="activity" value="Tie ribbon bow" />
-			<int key="frame_start" value="352" />
-			<int key="frame_end" value="521" />
-			<date key="timestamp_start" value="2026-11-16T10:16:34.466667+00:00" />
-			<date key="timestamp_end" value="2026-11-16T10:16:45.800000+00:00" />
-			<float key="duration_seconds" value="11.333333333333334" />
-			<string key="concept:name" value="Tie ribbon bow" />
-			<date key="time:timestamp" value="2026-11-16T10:16:34.466667+00:00" />
+			<int key="cluster_id" value="3" />
+			<string key="activity" value="Reach for wdt tool" />
+			<int key="frame_start" value="402" />
+			<int key="frame_end" value="441" />
+			<date key="timestamp_start" value="2026-11-16T19:25:26.800000+00:00" />
+			<date key="timestamp_end" value="2026-11-16T19:25:29.466667+00:00" />
+			<float key="duration_seconds" value="2.6666666666666665" />
+			<string key="concept:name" value="Reach for wdt tool" />
+			<date key="time:timestamp" value="2026-11-16T19:25:26.800000+00:00" />
 			<int key="@@index" value="5" />
 			<int key="@@case_index" value="0" />
 		</event>
 		<event>
-			<int key="videoID" value="1" />
+			<int key="videoID" value="2" />
 			<int key="segment_id" value="7" />
-			<int key="cluster_id" value="0" />
-			<string key="activity" value="Tie ribbon bow" />
-			<int key="frame_start" value="522" />
-			<int key="frame_end" value="754" />
-			<date key="timestamp_start" value="2026-11-16T10:16:45.800000+00:00" />
-			<date key="timestamp_end" value="2026-11-16T10:17:01.333333+00:00" />
-			<float key="duration_seconds" value="15.533333333333333" />
-			<string key="concept:name" value="Tie ribbon bow" />
-			<date key="time:timestamp" value="2026-11-16T10:16:45.800000+00:00" />
+			<int key="cluster_id" value="4" />
+			<string key="activity" value="Position wdt tool over portafilter" />
+			<int key="frame_start" value="442" />
+			<int key="frame_end" value="465" />
+			<date key="timestamp_start" value="2026-11-16T19:25:29.466667+00:00" />
+			<date key="timestamp_end" value="2026-11-16T19:25:31.066667+00:00" />
+			<float key="duration_seconds" value="1.6" />
+			<string key="concept:name" value="Position wdt tool over portafilter" />
+			<date key="time:timestamp" value="2026-11-16T19:25:29.466667+00:00" />
 			<int key="@@index" value="6" />
 			<int key="@@case_index" value="0" />
 		</event>
 		<event>
-			<int key="videoID" value="1" />
+			<int key="videoID" value="2" />
 			<int key="segment_id" value="8" />
-			<int key="cluster_id" value="2" />
-			<string key="activity" value="Cut ribbon with scissors" />
-			<int key="frame_start" value="755" />
-			<int key="frame_end" value="998" />
-			<date key="timestamp_start" value="2026-11-16T10:17:01.333333+00:00" />
-			<date key="timestamp_end" value="2026-11-16T10:17:17.600000+00:00" />
-			<float key="duration_seconds" value="16.266666666666666" />
-			<string key="concept:name" value="Cut ribbon with scissors" />
-			<date key="time:timestamp" value="2026-11-16T10:17:01.333333+00:00" />
+			<int key="cluster_id" value="5" />
+			<string key="activity" value="Stir grounds with wdt tool" />
+			<int key="frame_start" value="466" />
+			<int key="frame_end" value="595" />
+			<date key="timestamp_start" value="2026-11-16T19:25:31.066667+00:00" />
+			<date key="timestamp_end" value="2026-11-16T19:25:39.733333+00:00" />
+			<float key="duration_seconds" value="8.666666666666666" />
+			<string key="concept:name" value="Stir grounds with wdt tool" />
+			<date key="time:timestamp" value="2026-11-16T19:25:31.066667+00:00" />
 			<int key="@@index" value="7" />
 			<int key="@@case_index" value="0" />
 		</event>
 		<event>
-			<int key="videoID" value="1" />
+			<int key="videoID" value="2" />
 			<int key="segment_id" value="9" />
-			<int key="cluster_id" value="1" />
-			<string key="activity" value="Cut ribbon with scissors" />
-			<int key="frame_start" value="999" />
-			<int key="frame_end" value="1063" />
-			<date key="timestamp_start" value="2026-11-16T10:17:17.600000+00:00" />
-			<date key="timestamp_end" value="2026-11-16T10:17:21.933333+00:00" />
-			<float key="duration_seconds" value="4.333333333333333" />
-			<string key="concept:name" value="Cut ribbon with scissors" />
-			<date key="time:timestamp" value="2026-11-16T10:17:17.600000+00:00" />
+			<int key="cluster_id" value="6" />
+			<string key="activity" value="Stir grounds with wdt tool" />
+			<int key="frame_start" value="596" />
+			<int key="frame_end" value="669" />
+			<date key="timestamp_start" value="2026-11-16T19:25:39.733333+00:00" />
+			<date key="timestamp_end" value="2026-11-16T19:25:44.666667+00:00" />
+			<float key="duration_seconds" value="4.933333333333334" />
+			<string key="concept:name" value="Stir grounds with wdt tool" />
+			<date key="time:timestamp" value="2026-11-16T19:25:39.733333+00:00" />
 			<int key="@@index" value="8" />
 			<int key="@@case_index" value="0" />
 		</event>
 		<event>
-			<int key="videoID" value="1" />
+			<int key="videoID" value="2" />
 			<int key="segment_id" value="10" />
-			<int key="cluster_id" value="2" />
-			<string key="activity" value="Cut wrapping paper" />
-			<int key="frame_start" value="1064" />
-			<int key="frame_end" value="1199" />
-			<date key="timestamp_start" value="2026-11-16T10:17:21.933333+00:00" />
-			<date key="timestamp_end" value="2026-11-16T10:17:31+00:00" />
-			<float key="duration_seconds" value="9.066666666666666" />
-			<string key="concept:name" value="Cut wrapping paper" />
-			<date key="time:timestamp" value="2026-11-16T10:17:21.933333+00:00" />
+			<int key="cluster_id" value="7" />
+			<string key="activity" value="Stir grounds with wdt tool" />
+			<int key="frame_start" value="670" />
+			<int key="frame_end" value="819" />
+			<date key="timestamp_start" value="2026-11-16T19:25:44.666667+00:00" />
+			<date key="timestamp_end" value="2026-11-16T19:25:54.666667+00:00" />
+			<float key="duration_seconds" value="10.0" />
+			<string key="concept:name" value="Stir grounds with wdt tool" />
+			<date key="time:timestamp" value="2026-11-16T19:25:44.666667+00:00" />
 			<int key="@@index" value="9" />
 			<int key="@@case_index" value="0" />
 		</event>
 		<event>
-			<int key="videoID" value="1" />
+			<int key="videoID" value="2" />
 			<int key="segment_id" value="11" />
-			<int key="cluster_id" value="1" />
-			<string key="activity" value="Cut ribbon with scissors" />
-			<int key="frame_start" value="1200" />
-			<int key="frame_end" value="1520" />
-			<date key="timestamp_start" value="2026-11-16T10:17:31+00:00" />
-			<date key="timestamp_end" value="2026-11-16T10:17:52.400000+00:00" />
-			<float key="duration_seconds" value="21.4" />
-			<string key="concept:name" value="Cut ribbon with scissors" />
-			<date key="time:timestamp" value="2026-11-16T10:17:31+00:00" />
+			<int key="cluster_id" value="8" />
+			<string key="activity" value="Remove wdt tool from portafilter" />
+			<int key="frame_start" value="820" />
+			<int key="frame_end" value="880" />
+			<date key="timestamp_start" value="2026-11-16T19:25:54.666667+00:00" />
+			<date key="timestamp_end" value="2026-11-16T19:25:58.733333+00:00" />
+			<float key="duration_seconds" value="4.066666666666666" />
+			<string key="concept:name" value="Remove wdt tool from portafilter" />
+			<date key="time:timestamp" value="2026-11-16T19:25:54.666667+00:00" />
 			<int key="@@index" value="10" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="2" />
+			<int key="segment_id" value="12" />
+			<int key="cluster_id" value="7" />
+			<string key="activity" value="Set down wdt tool" />
+			<int key="frame_start" value="881" />
+			<int key="frame_end" value="913" />
+			<date key="timestamp_start" value="2026-11-16T19:25:58.733333+00:00" />
+			<date key="timestamp_end" value="2026-11-16T19:26:00.933333+00:00" />
+			<float key="duration_seconds" value="2.2" />
+			<string key="concept:name" value="Set down wdt tool" />
+			<date key="time:timestamp" value="2026-11-16T19:25:58.733333+00:00" />
+			<int key="@@index" value="11" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="2" />
+			<int key="segment_id" value="13" />
+			<int key="cluster_id" value="8" />
+			<string key="activity" value="Hold dosing ring on portafilter" />
+			<int key="frame_start" value="914" />
+			<int key="frame_end" value="939" />
+			<date key="timestamp_start" value="2026-11-16T19:26:00.933333+00:00" />
+			<date key="timestamp_end" value="2026-11-16T19:26:02.666667+00:00" />
+			<float key="duration_seconds" value="1.7333333333333334" />
+			<string key="concept:name" value="Hold dosing ring on portafilter" />
+			<date key="time:timestamp" value="2026-11-16T19:26:00.933333+00:00" />
+			<int key="@@index" value="12" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="2" />
+			<int key="segment_id" value="14" />
+			<int key="cluster_id" value="9" />
+			<string key="activity" value="shaking dosing ring on portafilter" />
+			<int key="frame_start" value="940" />
+			<int key="frame_end" value="1028" />
+			<date key="timestamp_start" value="2026-11-16T19:26:02.666667+00:00" />
+			<date key="timestamp_end" value="2026-11-16T19:26:08.600000+00:00" />
+			<float key="duration_seconds" value="5.933333333333334" />
+			<string key="concept:name" value="shaking dosing ring on portafilter" />
+			<date key="time:timestamp" value="2026-11-16T19:26:02.666667+00:00" />
+			<int key="@@index" value="13" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="2" />
+			<int key="segment_id" value="15" />
+			<int key="cluster_id" value="10" />
+			<string key="activity" value="Remove dosing ring from portafilter and clear the spillout" />
+			<int key="frame_start" value="1029" />
+			<int key="frame_end" value="1165" />
+			<date key="timestamp_start" value="2026-11-16T19:26:08.600000+00:00" />
+			<date key="timestamp_end" value="2026-11-16T19:26:17.733333+00:00" />
+			<float key="duration_seconds" value="9.133333333333333" />
+			<string key="concept:name" value="Remove dosing ring from portafilter and clear the spillout" />
+			<date key="time:timestamp" value="2026-11-16T19:26:08.600000+00:00" />
+			<int key="@@index" value="14" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="2" />
+			<int key="segment_id" value="16" />
+			<int key="cluster_id" value="9" />
+			<string key="activity" value="Hold portafilter over mat" />
+			<int key="frame_start" value="1166" />
+			<int key="frame_end" value="1197" />
+			<date key="timestamp_start" value="2026-11-16T19:26:17.733333+00:00" />
+			<date key="timestamp_end" value="2026-11-16T19:26:19.866667+00:00" />
+			<float key="duration_seconds" value="2.1333333333333333" />
+			<string key="concept:name" value="Hold portafilter over mat" />
+			<date key="time:timestamp" value="2026-11-16T19:26:17.733333+00:00" />
+			<int key="@@index" value="15" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="2" />
+			<int key="segment_id" value="17" />
+			<int key="cluster_id" value="11" />
+			<string key="activity" value="Place distributor on portafilter" />
+			<int key="frame_start" value="1198" />
+			<int key="frame_end" value="1251" />
+			<date key="timestamp_start" value="2026-11-16T19:26:19.866667+00:00" />
+			<date key="timestamp_end" value="2026-11-16T19:26:23.466667+00:00" />
+			<float key="duration_seconds" value="3.6" />
+			<string key="concept:name" value="Place distributor on portafilter" />
+			<date key="time:timestamp" value="2026-11-16T19:26:19.866667+00:00" />
+			<int key="@@index" value="16" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="2" />
+			<int key="segment_id" value="18" />
+			<int key="cluster_id" value="12" />
+			<string key="activity" value="Spin distributor on coffee grounds" />
+			<int key="frame_start" value="1252" />
+			<int key="frame_end" value="1345" />
+			<date key="timestamp_start" value="2026-11-16T19:26:23.466667+00:00" />
+			<date key="timestamp_end" value="2026-11-16T19:26:29.733333+00:00" />
+			<float key="duration_seconds" value="6.266666666666667" />
+			<string key="concept:name" value="Spin distributor on coffee grounds" />
+			<date key="time:timestamp" value="2026-11-16T19:26:23.466667+00:00" />
+			<int key="@@index" value="17" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="2" />
+			<int key="segment_id" value="19" />
+			<int key="cluster_id" value="11" />
+			<string key="activity" value="Spin and remove coffee distributor" />
+			<int key="frame_start" value="1346" />
+			<int key="frame_end" value="1469" />
+			<date key="timestamp_start" value="2026-11-16T19:26:29.733333+00:00" />
+			<date key="timestamp_end" value="2026-11-16T19:26:38+00:00" />
+			<float key="duration_seconds" value="8.266666666666667" />
+			<string key="concept:name" value="Spin and remove coffee distributor" />
+			<date key="time:timestamp" value="2026-11-16T19:26:29.733333+00:00" />
+			<int key="@@index" value="18" />
+			<int key="@@case_index" value="0" />
+		</event>
+		<event>
+			<int key="videoID" value="2" />
+			<int key="segment_id" value="20" />
+			<int key="cluster_id" value="13" />
+			<string key="activity" value="Tamp coffee grounds in portafilter" />
+			<int key="frame_start" value="1470" />
+			<int key="frame_end" value="1707" />
+			<date key="timestamp_start" value="2026-11-16T19:26:38+00:00" />
+			<date key="timestamp_end" value="2026-11-16T19:26:53.866667+00:00" />
+			<float key="duration_seconds" value="15.866666666666667" />
+			<string key="concept:name" value="Tamp coffee grounds in portafilter" />
+			<date key="time:timestamp" value="2026-11-16T19:26:38+00:00" />
+			<int key="@@index" value="19" />
 			<int key="@@case_index" value="0" />
 		</event>
 	</trace>

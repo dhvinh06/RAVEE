@@ -9,10 +9,13 @@ from tkinter import ttk, messagebox
 from queue import Queue, Empty
 from threading import Thread
 from label_suggester import suggest_activity  # RAVEE_LABEL_SUGGESTER_INTEGRATED
+from batch_label_suggester import suggest_all_activities
+from gemini_runtime import redact_text
 
 import cv2
 from PIL import Image, ImageTk
 from gui.theme import COLORS, apply_theme, fit_window, style_text, workspace_header
+from gui.quota_recovery import QuotaRecovery
 
 
 # Different cluster numbers offered by FINCH
@@ -238,6 +241,8 @@ def label_video_clusters(video_path, segments):
     ttk.Label(side, textvariable=cluster_range, style="CardMuted.TLabel").grid(row=2, column=0, sticky="w", pady=(0, 12))
 
     ttk.Label(side, text="Activity label", style="Section.TLabel").grid(row=3, column=0, sticky="w")
+    use_batch_button = ttk.Button(side, text="Use batch suggestion", state="disabled")
+    use_batch_button.grid(row=3, column=0, sticky="e", pady=(0, 4))
     label_entry = ttk.Entry(side)
     label_entry.grid(row=4, column=0, sticky="new", pady=(5, 8))
 
@@ -255,14 +260,19 @@ def label_video_clusters(video_path, segments):
     previous_button.grid(row=0, column=0, sticky="ew", padx=(0, 4))
     play_button = ttk.Button(navigation, text="Play")
     play_button.grid(row=0, column=1, sticky="ew", padx=(4, 0))
-    navigation.columnconfigure(2, weight=1)
-    suggest_button = ttk.Button(navigation, text="Suggest label")
-    suggest_button.grid(row=0, column=2, sticky="ew", padx=(4, 0))
+    suggestion_controls = ttk.Frame(navigation, style="Card.TFrame")
+    suggestion_controls.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(8, 0))
+    suggestion_controls.columnconfigure(0, weight=1)
+    suggestion_controls.columnconfigure(1, weight=1)
+    suggest_button = ttk.Button(suggestion_controls, text="Suggest label")
+    suggest_button.grid(row=0, column=0, sticky="ew", padx=(0, 4))
+    suggest_all_button = ttk.Button(suggestion_controls, text="Suggest All")
+    suggest_all_button.grid(row=0, column=1, sticky="ew", padx=(4, 0))
 
     ttk.Label(side, text="Segment overview", style="Section.TLabel").grid(row=8, column=0, sticky="w", pady=(0, 5))
     tree = ttk.Treeview(
         side,
-        columns=("cluster", "frames", "status"),
+        columns=("cluster", "frames", "status", "batch"),
         show="headings",
         height=11,
         selectmode="browse",
@@ -270,9 +280,11 @@ def label_video_clusters(video_path, segments):
     tree.heading("cluster", text="Cluster")
     tree.heading("frames", text="Frames")
     tree.heading("status", text="Status")
+    tree.heading("batch", text="Batch suggestion")
     tree.column("cluster", width=65, anchor="center")
     tree.column("frames", width=90, anchor="center")
-    tree.column("status", width=105, anchor="center")
+    tree.column("status", width=75, anchor="center")
+    tree.column("batch", width=155, minwidth=100, anchor="w")
     tree.tag_configure("alternate", background=COLORS['stripe'])
     tree.grid(row=9, column=0, sticky="nsew")
     side.rowconfigure(9, weight=1)
@@ -282,9 +294,10 @@ def label_video_clusters(video_path, segments):
     tree_scroll.grid(row=9, column=1, sticky="ns")
 
     suggestion_text = tk.StringVar(value="Click Suggest label for an AI suggestion.")
-    ttk.Label(side, textvariable=suggestion_text, style="CardMuted.TLabel", wraplength=340).grid(
-        row=10, column=0, sticky="w", pady=(6, 0)
-    )
+    suggestion_status = ttk.Label(side, textvariable=suggestion_text,
+                                  style="CardMuted.TLabel", wraplength=340)
+    suggestion_status.grid(row=10, column=0, sticky="w", pady=(6, 0))
+    batch_text = tk.StringVar(value="Suggest All proposes labels for every segment in one request.")
 
     footer = ttk.Frame(root, padding=(24, 0, 24, 16))
     footer.grid(row=2, column=0, sticky="ew")
@@ -297,6 +310,8 @@ def label_video_clusters(video_path, segments):
     playing = False
     after_id = None
     suggestions = {}  # segment index -> proposed text (not committed)
+    batch_suggestions = {}  # Separate from individual V3; never written to LABEL.
+    batch_pending = False
     suggestion_queue = Queue()
     pending_suggestion = None
     preview_image = None
@@ -327,6 +342,7 @@ def label_video_clusters(video_path, segments):
                     str(seg["cluster_id"]),
                     f'{seg["start_frame"]}-{seg["end_frame"]}',
                     status,
+                    batch_suggestions.get(i, ""),
                 ),
             )
 
@@ -420,7 +436,17 @@ def label_video_clusters(video_path, segments):
         drafts[current_index] = label_entry.get().strip()
 
     def update_suggestion_ui():
-        if pending_suggestion is not None:
+        busy = pending_suggestion is not None or batch_pending
+        suggest_all_button.configure(state="disabled" if busy or recovery.disabled else "normal")
+        use_batch_button.configure(state="normal" if current_index in batch_suggestions else "disabled")
+        # Share the status area to leave room for the scrollable segment list.
+        suggestion_status.configure(textvariable=batch_text if batch_pending or
+            (current_index in batch_suggestions and pending_suggestion is None) else suggestion_text)
+        if current_index in batch_suggestions:
+            batch_text.set(f"Batch suggestion: {batch_suggestions[current_index]} (review before committing)")
+        if batch_pending:
+            suggest_button.configure(text="Suggest label", state="disabled")
+        elif pending_suggestion is not None:
             suggest_button.configure(text="Suggesting...", state="disabled")
             suggestion_text.set(
                 "Analyzing this segment..." if pending_suggestion == current_index
@@ -429,12 +455,17 @@ def label_video_clusters(video_path, segments):
         elif current_index in suggestions:
             suggest_button.configure(text="Use suggestion", state="normal")
             suggestion_text.set(f"AI suggestion: {suggestions[current_index]}")
+        elif recovery.disabled:
+            suggest_button.configure(text="AI disabled for this review", state="disabled")
+            suggestion_text.set("Manual labeling is available. Completed suggestions are preserved.")
         else:
             suggest_button.configure(text="Suggest label", state="normal")
             suggestion_text.set("Click Suggest label to generate a suggestion.")
 
     def request_suggestion():
         nonlocal pending_suggestion
+        if pending_suggestion is not None or batch_pending:
+            return
         index = current_index
         if index in suggestions:
             # The user explicitly chooses to put the suggestion in the entry;
@@ -445,8 +476,9 @@ def label_video_clusters(video_path, segments):
             update_progress_and_tree()
             label_entry.focus_set()
             suggestion_text.set("Suggestion inserted. Review and click Commit & Next.")
+            suggestion_status.configure(textvariable=suggestion_text)
             return
-        if pending_suggestion is not None:
+        if recovery.disabled:
             return
 
         pending_suggestion = index
@@ -456,7 +488,8 @@ def label_video_clusters(video_path, segments):
         def worker():
             try:
                 label = suggest_activity(
-                    video_path, segment["start_frame"], segment["end_frame"]
+                    video_path, segment["start_frame"], segment["end_frame"],
+                    on_daily_quota=recovery.handle_quota,
                 )
                 suggestion_queue.put((index, label, None))
             except Exception as exc:
@@ -464,11 +497,58 @@ def label_video_clusters(video_path, segments):
 
         Thread(target=worker, daemon=True).start()
 
+    def request_all_suggestions():
+        nonlocal batch_pending
+        if batch_pending or pending_suggestion is not None or recovery.disabled:
+            return
+        save_current_draft()
+        batch_pending = True
+        update_suggestion_ui()
+        batch_text.set(f"Preparing suggestions for all {len(segments)} segments...")
+        # Freeze IDs/boundaries on the UI thread; workers never read widgets.
+        boundaries = [dict(segment_id=i + 1, start_frame=int(segment['start_frame']),
+                           end_frame=int(segment['end_frame'])) for i, segment in enumerate(segments)]
+
+        def worker():
+            try:
+                labels = suggest_all_activities(video_path, boundaries,
+                    on_daily_quota=recovery.handle_quota,
+                    progress=lambda message: suggestion_queue.put(('batch_progress', message, None)))
+                suggestion_queue.put(('batch', labels, None))
+            except Exception as error:
+                suggestion_queue.put(('batch', None, redact_text(error, 300)))
+        Thread(target=worker, daemon=True).start()
+
+    def use_batch_suggestion():
+        if current_index not in batch_suggestions:
+            return
+        label_entry.delete(0, 'end')
+        label_entry.insert(0, batch_suggestions[current_index])
+        save_current_draft()
+        update_progress_and_tree()
+        label_entry.focus_set()
+        batch_text.set('Batch suggestion inserted. Review and click Commit & Next.')
+        suggestion_status.configure(textvariable=batch_text)
+
     def poll_suggestions():
-        nonlocal pending_suggestion
+        nonlocal pending_suggestion, batch_pending
         try:
             while True:
                 index, label, error = suggestion_queue.get_nowait()
+                if index == 'batch_progress':
+                    batch_text.set(label)
+                    continue
+                if index == 'batch':
+                    batch_pending = False
+                    if label is not None:
+                        batch_suggestions.update({identifier - 1: value for identifier, value in label.items()})
+                        update_progress_and_tree()
+                    update_suggestion_ui()
+                    suggestion_status.configure(textvariable=batch_text)
+                    batch_text.set('Suggest All unavailable; your labels and drafts are preserved. ' + error
+                                   if error else f'{len(batch_suggestions)} batch suggestions ready. '
+                                   'Select a segment and use its batch suggestion when ready; nothing was committed.')
+                    continue
                 pending_suggestion = None
                 if label:
                     suggestions[index] = label
@@ -596,9 +676,20 @@ def label_video_clusters(video_path, segments):
             return
         root.destroy()
 
+    def show_quota_status(message):
+        (batch_text if batch_pending else suggestion_text).set(message)
+
+    recovery = QuotaRecovery(root,
+        on_pause=lambda: show_quota_status('Daily quota exhausted. Request paused; manual labeling is available.'),
+        on_decision=lambda action: show_quota_status({
+            'manual': 'Further AI requests disabled. Continue labeling manually.',
+            'cancel': 'Pending AI request cancelled. Your labels and drafts are preserved.',
+            'select': 'Resuming the pending AI request with the selected project.'}[action]))
     previous_button.configure(command=go_previous)
     play_button.configure(command=toggle_playback)
     suggest_button.configure(command=request_suggestion)
+    suggest_all_button.configure(command=request_all_suggestions)
+    use_batch_button.configure(command=use_batch_suggestion)
     action_button.configure(command=commit_and_next)
     video_label.bind("<Configure>", resize_preview)
     tree.bind("<Double-1>", on_tree_double_click)
@@ -616,16 +707,18 @@ def label_video_clusters(video_path, segments):
             "end",
             iid=str(i),
             tags=("alternate",) if i % 2 else (),
-            values=(str(seg["cluster_id"]), f'{seg["start_frame"]}-{seg["end_frame"]}', "Pending"),
+            values=(str(seg["cluster_id"]), f'{seg["start_frame"]}-{seg["end_frame"]}', "Pending", ""),
         )
 
     root.update_idletasks()
     go_to_segment(0)
     root.after(150, poll_suggestions)
-    root.mainloop()
-
-    stop_playback()
-    cap.release()
+    try:
+        root.mainloop()
+    finally:
+        recovery.close()
+        stop_playback()
+        cap.release()
 
     # The existing main.py expects a label for every segment.
     missing = [i + 1 for i in uncommitted_segments(LABEL, drafts, len(segments))]

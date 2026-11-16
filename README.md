@@ -70,6 +70,11 @@ override the model independently. [Configuration, quota handling, intermediate
 task objectives and comparison snapshots](docs/GEMINI_CONFIGURATION_AND_TASK_OBJECTIVES.md)
 describe the explicit request workflow and preserved baselines.
 
+Confirmed daily Gemini quota exhaustion opens a nonblocking recovery dialog in
+both review GUIs: continue manually, explicitly select another configured
+credential, or cancel the AI request while keeping review progress. Credentials
+are never rotated automatically; completed cached work is retained.
+
 ## Run the application
 
 Non-demo mode is selected by `DEMO = False` in `toolbox/main.py`.
@@ -138,6 +143,14 @@ operations before confirming; matching action labels or cluster IDs do not decid
 tasks. Aggregation makes API requests only after an explicit GUI request. Refresh
 rechecks semantic boundaries for the current video/case, preserving old valid
 fallbacks when the service is unavailable. It does not rebuild pipeline stages.
+
+In Segment Activity Labeling, **Suggest All** beside **Suggest label** sends the
+current video and every FINCH segment in one generation request. Results appear
+in the **Batch suggestion** column; **Use batch suggestion** fills the selected
+editor without committing it. Reviewed labels and drafts remain unchanged until
+you explicitly use/commit a suggestion. Batch results use a separate content-aware
+cache and the shared credential/quota-recovery controls. See
+[batch labeling behavior and limits](docs/BATCH_LABEL_SUGGESTIONS.md).
 
 To review an existing detailed log without preprocessing, IDT or FINCH:
 

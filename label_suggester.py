@@ -20,7 +20,12 @@ from pathlib import Path
 import cv2
 import numpy as np
 from gemini_runtime import (resolve_credential, get_model, create_client,
-    generation_config, generate_with_retry, classify_error, InvalidResponseError, redact_text as _redact_text)
+    generation_config, generate_with_retry, classify_error, InvalidResponseError,
+    RequestSession, redact_text as _redact_text)
+
+# Recovery changes do not alter media/prompt semantics. Preserve the existing
+# aggregation cache encoder identity; bump this when encoding semantics change.
+AGGREGATION_ENCODER_SIGNATURE = 'bc25e92f096f26b8af236943c0652ec432e73a524d3ac8cfac7849ffce927d2c'
 
 # Keep each inline request reasonably small. Files API is intentionally not
 # required: short clips avoid the prior upload/processing wait.
@@ -403,6 +408,7 @@ def suggest_activity(
     start_frame: int,
     end_frame: int,
     sample_count: int = 6,
+    *, on_daily_quota=None,
 ) -> str:
     """Return an unverified suggested activity label for [start_frame,end_frame].
 
@@ -473,7 +479,7 @@ def suggest_activity(
 
     model = get_model('label')
     try:
-        with create_client(credential) as client:
+        with RequestSession(credential, on_daily_quota, factory=create_client) as client:
             response = generate_with_retry(client, dict(model=model, contents=contents,
                 config=_generation_config(model, types)))
     except Exception as error:

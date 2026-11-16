@@ -9,6 +9,7 @@ import cv2
 from PIL import Image, ImageTk
 from gui.theme import COLORS, apply_theme, fit_window, style_text, workspace_header
 from gui.video_preview import resize_preview_image
+from gui.quota_recovery import QuotaRecovery
 from gemini_runtime import get_model, redact_text
 
 from toolbox.semantic_aggregation import GroupEditor, ReviewCancelled, segment_records, propose_task_groups
@@ -133,6 +134,7 @@ def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_map
     result, playback, polling = None, None, None
     preview_image = None
     resize_timer = None
+    restore_timer = None
     queue = Queue()
     pending = False
     boundary_sources = []
@@ -278,12 +280,85 @@ def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_map
             button.configure(state='disabled' if value else 'normal')
         label.configure(state='disabled' if value else 'normal')
         reason.configure(state='disabled' if value else 'normal')
-        suggest_button.configure(state='disabled' if value or offline else 'normal')
-        refresh_button.configure(state='disabled' if value or offline else 'normal')
+        ai_disabled = value or offline or request_inflight or recovery.disabled
+        suggest_button.configure(state='disabled' if ai_disabled else 'normal')
+        refresh_button.configure(state='disabled' if ai_disabled else 'normal')
+
+    def paused():
+        lock(False)  # Manual review stays usable while the worker waits.
+        status.set('Daily quota exhausted. Request paused; labels, edits and selection are preserved.')
+
+    request_inflight = False
+    recovered_proposals = None
+    request_interruptions = 0
+    recovery = QuotaRecovery(root, on_pause=paused, on_resume=lambda: lock(True),
+        on_decision=lambda action: status.set({
+            'manual': 'Further AI requests disabled for this review. Continue editing manually.',
+            'cancel': 'Pending AI request cancelled. Current review is preserved.',
+            'select': 'Resuming only the pending request with the selected project.'}[action]))
+
+    def load_recovered():
+        nonlocal recovered_proposals, boundary_sources
+        if recovered_proposals is None or not messagebox.askyesno('Load recovered proposals',
+                'Replace the current task groups with the recovered proposals? '
+                'Apply any pending text edits first. Undo restores the previous groups.', parent=root):
+            return
+        payload, detail = recovered_proposals
+        # Save pending form content too; Undo restores this exact review state.
+        checkpoint = (selection(), label.get(), reason.get('1.0', 'end-1c'), boundary_sources,
+                      dict(run_metadata) if run_metadata is not None else None)
+        editor.replace(payload)
+        recovered_checkpoints[len(editor.history)] = checkpoint
+        boundary_sources = detail['boundary_sources']
+        record_metadata(detail)
+        recovered_proposals = None
+        suggest_button.configure(text='Suggest task groups')
+        refresh()
+        status.set('Recovered proposals loaded, not confirmed. Undo restores your previous review.')
+
+    recovered_checkpoints = {}
+
+    def undo_review():
+        nonlocal boundary_sources, restore_timer
+        if pending:
+            return
+        checkpoint = recovered_checkpoints.pop(len(editor.history), None)
+        editor.undo()
+        if checkpoint:
+            boundary_sources = checkpoint[3]
+            if run_metadata is not None:
+                run_metadata.clear()
+                run_metadata.update(checkpoint[4])
+        refresh(checkpoint[0][0] if checkpoint and checkpoint[0] else 0)
+        if checkpoint:
+            indices, text, explanation = checkpoint[:3]
+            tree.selection_set(tuple(str(index) for index in indices))
+            def restore_form():
+                nonlocal restore_timer
+                restore_timer = None
+                if selection() == indices:
+                    label.delete(0, 'end')
+                    label.insert(0, text)
+                    reason.delete('1.0', 'end')
+                    reason.insert('1.0', explanation)
+            if restore_timer is not None:
+                root.after_cancel(restore_timer)
+            restore_form()
+            # Tk queues <<TreeviewSelect>>; restore after that event too, so
+            # selection notifications cannot discard the restored pending text.
+            restore_timer = root.after_idle(restore_form)
+
+    def record_metadata(detail):
+        if run_metadata is not None:
+            run_metadata['ai_provenance'] = detail.get('provenance', {})
+            run_metadata['api_calls'] = detail.get('api_calls', 0)
 
     def suggest(force_refresh=False):
-        nonlocal refresh_suggestions
-        if offline or pending:
+        nonlocal refresh_suggestions, request_inflight, request_interruptions
+        if offline or pending or request_inflight or recovery.disabled:
+            return
+        if recovered_proposals is not None and not force_refresh:
+            load_recovered()
             return
         refresh_requested = force_refresh or refresh_suggestions
         if not messagebox.askyesno('Gemini task proposals',
@@ -294,6 +369,8 @@ def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_map
                 parent=root):
             return
         refresh_suggestions = False  # CLI arms one explicit request; Refresh always forces a new one.
+        request_inflight = True
+        request_interruptions = recovery.interruptions
         lock(True)
         status.set(f'{redact_text(get_model("aggregation"), 80)} is proposing adjacent task groups. Review and confirm intermediate objectives.')
 
@@ -302,33 +379,45 @@ def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_map
                 summary = {}
                 groups = propose_task_groups(video_path, detailed_df.copy(deep=True),
                     progress=lambda message: queue.put(('progress', message, None)), stats=summary,
-                    refresh_suggestions=refresh_requested)
+                    refresh_suggestions=refresh_requested, on_daily_quota=recovery.handle_quota)
                 queue.put(('result', groups, summary))
             except Exception as error:
                 queue.put(('error', None, str(error)))
         Thread(target=worker, daemon=True).start()
 
     def poll():
-        nonlocal polling, boundary_sources
+        nonlocal polling, boundary_sources, request_inflight, recovered_proposals
         try:
             while True:
                 kind, payload, detail = queue.get_nowait()
                 if kind == 'progress':
                     status.set(payload)
                     continue
+                request_inflight = False
                 lock(False)
                 if kind == 'error':
                     status.set('AI unavailable; current groups preserved. Manual review still works. ' + redact_text(detail, 220))
                 else:
-                    boundary_sources = detail['boundary_sources']
-                    if run_metadata is not None:
-                        run_metadata['ai_provenance'] = detail.get('provenance', {})
-                        run_metadata['api_calls'] = detail.get('api_calls', 0)
+                    if detail.get('error_kind') == 'daily_quota':
+                        # Even partial proposals must not replace human review
+                        # after Cancel/manual. Fresh results remain cached.
+                        status.set('Daily quota request stopped; current review preserved. ' +
+                                   ('Further AI requests disabled.' if recovery.disabled else
+                                    'A later explicit request can reuse completed cached work.'))
+                        continue
                     if detail['total'] > 0 and detail['unresolved'] == detail['total']:
                         status.set('AI unavailable; current groups preserved. All boundaries remain '
                                    f"unresolved for manual review ({detail.get('error_message') or detail['error']}).")
                         continue
+                    if recovery.interruptions > request_interruptions:
+                        recovered_proposals = (payload, detail)
+                        suggest_button.configure(text='Load recovered proposals')
+                        status.set('Pending AI work recovered. Current review is preserved; '
+                                   'use Load recovered proposals when ready.')
+                        continue
+                    boundary_sources = detail['boundary_sources']
                     editor.replace(payload)
+                    record_metadata(detail)
                     refresh()
                     status.set(f"Proposals ready, not confirmed: {detail['api_calls']} API calls; "
                                f"{detail['fresh']} fresh; {detail['cache_hits']} reused "
@@ -368,7 +457,7 @@ def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_map
     apply_button.configure(command=lambda: act(apply_edit))
     merge_button.configure(command=lambda: act(lambda: editor.merge(selection())))
     split_button.configure(command=lambda: act(lambda: editor.split(selection()[0], int(split_at.get()))))
-    undo_button.configure(command=lambda: act(editor.undo))
+    undo_button.configure(command=undo_review)
     reset_button.configure(command=lambda: act(editor.reset))
     suggest_button.configure(command=suggest)
     refresh_button.configure(command=lambda: suggest(force_refresh=True))
@@ -385,9 +474,12 @@ def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_map
         polling = root.after(150, poll)
         root.mainloop()
     finally:
+        recovery.close()
         stop()
         if resize_timer is not None:
             root.after_cancel(resize_timer)
+        if restore_timer is not None:
+            root.after_cancel(restore_timer)
         if polling is not None:
             root.after_cancel(polling)
         cap.release()

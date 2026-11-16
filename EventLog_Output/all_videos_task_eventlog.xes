@@ -1,109 +1,109 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <log xes.version="1849-2016" xes.features="nested-attributes" xmlns="http://www.xes-standard.org/">
-	<extension name="Concept" prefix="concept" uri="http://www.xes-standard.org/concept.xesext" />
 	<extension name="Time" prefix="time" uri="http://www.xes-standard.org/time.xesext" />
+	<extension name="Concept" prefix="concept" uri="http://www.xes-standard.org/concept.xesext" />
 	<string key="origin" value="csv" />
 	<trace>
-		<string key="concept:name" value="1" />
+		<string key="concept:name" value="2" />
 		<event>
-			<int key="videoID" value="1" />
-			<string key="activity" value="Tie ribbon bow" />
+			<int key="videoID" value="2" />
+			<string key="activity" value="Transfer coffee grounds to portafilter" />
 			<int key="frame_start" value="0" />
-			<int key="frame_end" value="121" />
-			<date key="timestamp_start" value="2026-11-16T10:16:11+00:00" />
-			<date key="timestamp_end" value="2026-11-16T10:16:19.133333+00:00" />
-			<float key="duration_seconds" value="8.133333333333333" />
-			<string key="source_segment_ids" value="1" />
-			<string key="source_activities" value="Tie ribbon bow" />
+			<int key="frame_end" value="328" />
+			<date key="timestamp_start" value="2026-11-16T19:25:00+00:00" />
+			<date key="timestamp_end" value="2026-11-16T19:25:21.933333+00:00" />
+			<float key="duration_seconds" value="21.933333333333334" />
+			<string key="source_segment_ids" value="1,2,3" />
+			<string key="source_activities" value="Show dosing ring and attach cup | Tap and remove dosing cup | Set down dosing cup" />
 			<int key="task_group_id" value="1" />
-			<string key="group_explanation" value="Original segment; no semantic merge confirmed" />
-			<string key="concept:name" value="Tie ribbon bow" />
-			<date key="time:timestamp" value="2026-11-16T10:16:11+00:00" />
+			<string key="group_explanation" value="The same portafilter and dosing cup are held together; tapping and lifting the cup continues the transfer.; The same dosing cup is lifted off the portafilter and placed on the wooden stand." />
+			<string key="concept:name" value="Transfer coffee grounds to portafilter" />
+			<date key="time:timestamp" value="2026-11-16T19:25:00+00:00" />
 			<int key="@@index" value="0" />
 			<int key="@@case_index" value="0" />
 		</event>
 		<event>
-			<int key="videoID" value="1" />
-			<string key="activity" value="fold wrapping paper" />
-			<int key="frame_start" value="122" />
-			<int key="frame_end" value="219" />
-			<date key="timestamp_start" value="2026-11-16T10:16:19.133333+00:00" />
-			<date key="timestamp_end" value="2026-11-16T10:16:25.666667+00:00" />
-			<float key="duration_seconds" value="6.533333333333333" />
-			<string key="source_segment_ids" value="2,3,4" />
-			<string key="source_activities" value="Fold wrapping paper | Fold wrapping paper | Fold wrapping paper" />
+			<int key="videoID" value="2" />
+			<string key="activity" value="Settle coffee grounds in portafilter" />
+			<int key="frame_start" value="329" />
+			<int key="frame_end" value="401" />
+			<date key="timestamp_start" value="2026-11-16T19:25:21.933333+00:00" />
+			<date key="timestamp_end" value="2026-11-16T19:25:26.800000+00:00" />
+			<float key="duration_seconds" value="4.866666666666667" />
+			<string key="source_segment_ids" value="4,5" />
+			<string key="source_activities" value="hold dosing ring on portafilter | Hold portafilter and dosing ring then shaking" />
 			<int key="task_group_id" value="2" />
-			<string key="group_explanation" value="Continues folding paper folds on the same box.; Final crease refinement on the wrapping paper edge." />
-			<string key="concept:name" value="fold wrapping paper" />
-			<date key="time:timestamp" value="2026-11-16T10:16:19.133333+00:00" />
+			<string key="group_explanation" value="The same portafilter and dosing ring are held and then shaken." />
+			<string key="concept:name" value="Settle coffee grounds in portafilter" />
+			<date key="time:timestamp" value="2026-11-16T19:25:21.933333+00:00" />
 			<int key="@@index" value="1" />
 			<int key="@@case_index" value="0" />
 		</event>
 		<event>
-			<int key="videoID" value="1" />
-			<string key="activity" value="tie ribbon bow" />
-			<int key="frame_start" value="220" />
-			<int key="frame_end" value="754" />
-			<date key="timestamp_start" value="2026-11-16T10:16:25.666667+00:00" />
-			<date key="timestamp_end" value="2026-11-16T10:17:01.333333+00:00" />
-			<float key="duration_seconds" value="35.66666666666667" />
-			<string key="source_segment_ids" value="5,6,7" />
-			<string key="source_activities" value="Tie ribbon bow | Tie ribbon bow | Tie ribbon bow" />
+			<int key="videoID" value="2" />
+			<string key="activity" value="Distribute coffee grounds with WDT tool" />
+			<int key="frame_start" value="402" />
+			<int key="frame_end" value="913" />
+			<date key="timestamp_start" value="2026-11-16T19:25:26.800000+00:00" />
+			<date key="timestamp_end" value="2026-11-16T19:26:00.933333+00:00" />
+			<float key="duration_seconds" value="34.13333333333333" />
+			<string key="source_segment_ids" value="6,7,8,9,10,11,12" />
+			<string key="source_activities" value="Reach for wdt tool | Position wdt tool over portafilter | Stir grounds with wdt tool | Stir grounds with wdt tool | Stir grounds with wdt tool | Remove wdt tool from portafilter | Set down wdt tool" />
 			<int key="task_group_id" value="3" />
-			<string key="group_explanation" value="Continuous handling of the ribbon and bow knot on the same gift box.; Adjusting and knotting the ribbon strings on the package." />
-			<string key="concept:name" value="tie ribbon bow" />
-			<date key="time:timestamp" value="2026-11-16T10:16:25.666667+00:00" />
+			<string key="group_explanation" value="The WDT tool is picked up and brought over the portafilter.; The WDT tool is lowered into the portafilter grounds and stirred.; The same WDT tool continues stirring the grounds in the portafilter.; The WDT tool is lifted out of the portafilter after stirring.; The same WDT tool is moved away and set down on the counter mat." />
+			<string key="concept:name" value="Distribute coffee grounds with WDT tool" />
+			<date key="time:timestamp" value="2026-11-16T19:25:26.800000+00:00" />
 			<int key="@@index" value="2" />
 			<int key="@@case_index" value="0" />
 		</event>
 		<event>
-			<int key="videoID" value="1" />
-			<string key="activity" value="cut ribbon with scissors" />
-			<int key="frame_start" value="755" />
-			<int key="frame_end" value="1063" />
-			<date key="timestamp_start" value="2026-11-16T10:17:01.333333+00:00" />
-			<date key="timestamp_end" value="2026-11-16T10:17:21.933333+00:00" />
-			<float key="duration_seconds" value="20.599999999999998" />
-			<string key="source_segment_ids" value="8,9" />
-			<string key="source_activities" value="Cut ribbon with scissors | Cut ribbon with scissors" />
+			<int key="videoID" value="2" />
+			<string key="activity" value="Settle grounds with dosing ring" />
+			<int key="frame_start" value="914" />
+			<int key="frame_end" value="1165" />
+			<date key="timestamp_start" value="2026-11-16T19:26:00.933333+00:00" />
+			<date key="timestamp_end" value="2026-11-16T19:26:17.733333+00:00" />
+			<float key="duration_seconds" value="16.8" />
+			<string key="source_segment_ids" value="13,14,15" />
+			<string key="source_activities" value="Hold dosing ring on portafilter | shaking dosing ring on portafilter | Remove dosing ring from portafilter and clear the spillout" />
 			<int key="task_group_id" value="4" />
-			<string key="group_explanation" value="Continues cutting ribbon with scissors on the same package." />
-			<string key="concept:name" value="cut ribbon with scissors" />
-			<date key="time:timestamp" value="2026-11-16T10:17:01.333333+00:00" />
+			<string key="group_explanation" value="The same dosing ring on the portafilter is held and then shaken.; After shaking the dosing ring on the portafilter, the same ring is removed and the rim is cleared." />
+			<string key="concept:name" value="Settle grounds with dosing ring" />
+			<date key="time:timestamp" value="2026-11-16T19:26:00.933333+00:00" />
 			<int key="@@index" value="3" />
 			<int key="@@case_index" value="0" />
 		</event>
 		<event>
-			<int key="videoID" value="1" />
-			<string key="activity" value="Cut wrapping paper" />
-			<int key="frame_start" value="1064" />
-			<int key="frame_end" value="1199" />
-			<date key="timestamp_start" value="2026-11-16T10:17:21.933333+00:00" />
-			<date key="timestamp_end" value="2026-11-16T10:17:31+00:00" />
-			<float key="duration_seconds" value="9.066666666666666" />
-			<string key="source_segment_ids" value="10" />
-			<string key="source_activities" value="Cut wrapping paper" />
+			<int key="videoID" value="2" />
+			<string key="activity" value="Level grounds with distributor" />
+			<int key="frame_start" value="1166" />
+			<int key="frame_end" value="1469" />
+			<date key="timestamp_start" value="2026-11-16T19:26:17.733333+00:00" />
+			<date key="timestamp_end" value="2026-11-16T19:26:38+00:00" />
+			<float key="duration_seconds" value="20.266666666666666" />
+			<string key="source_segment_ids" value="16,17,18,19" />
+			<string key="source_activities" value="Hold portafilter over mat | Place distributor on portafilter | Spin distributor on coffee grounds | Spin and remove coffee distributor" />
 			<int key="task_group_id" value="5" />
-			<string key="group_explanation" value="Original segment; no semantic merge confirmed" />
-			<string key="concept:name" value="Cut wrapping paper" />
-			<date key="time:timestamp" value="2026-11-16T10:17:21.933333+00:00" />
+			<string key="group_explanation" value="The portafilter is held steady over the mat as the distributor is placed on top of it.; The distributor placed on the portafilter is spun on the coffee grounds.; The same distributor continues spinning and is then lifted off the portafilter." />
+			<string key="concept:name" value="Level grounds with distributor" />
+			<date key="time:timestamp" value="2026-11-16T19:26:17.733333+00:00" />
 			<int key="@@index" value="4" />
 			<int key="@@case_index" value="0" />
 		</event>
 		<event>
-			<int key="videoID" value="1" />
-			<string key="activity" value="Cut ribbon with scissors" />
-			<int key="frame_start" value="1200" />
-			<int key="frame_end" value="1520" />
-			<date key="timestamp_start" value="2026-11-16T10:17:31+00:00" />
-			<date key="timestamp_end" value="2026-11-16T10:17:52.400000+00:00" />
-			<float key="duration_seconds" value="21.4" />
-			<string key="source_segment_ids" value="11" />
-			<string key="source_activities" value="Cut ribbon with scissors" />
+			<int key="videoID" value="2" />
+			<string key="activity" value="Tamp coffee grounds in portafilter" />
+			<int key="frame_start" value="1470" />
+			<int key="frame_end" value="1707" />
+			<date key="timestamp_start" value="2026-11-16T19:26:38+00:00" />
+			<date key="timestamp_end" value="2026-11-16T19:26:53.866667+00:00" />
+			<float key="duration_seconds" value="15.866666666666667" />
+			<string key="source_segment_ids" value="20" />
+			<string key="source_activities" value="Tamp coffee grounds in portafilter" />
 			<int key="task_group_id" value="6" />
 			<string key="group_explanation" value="Original segment; no semantic merge confirmed" />
-			<string key="concept:name" value="Cut ribbon with scissors" />
-			<date key="time:timestamp" value="2026-11-16T10:17:31+00:00" />
+			<string key="concept:name" value="Tamp coffee grounds in portafilter" />
+			<date key="time:timestamp" value="2026-11-16T19:26:38+00:00" />
 			<int key="@@index" value="5" />
 			<int key="@@case_index" value="0" />
 		</event>

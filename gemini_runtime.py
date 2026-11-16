@@ -21,6 +21,7 @@ _PREEXISTING_ENV = set(os.environ)
 load_dotenv(_ENV_PATH)
 _INJECTED = {key: value for key, value in os.environ.items() if key not in _PREEXISTING_ENV}
 _SEEN_SECRETS = set()
+_SESSION_CREDENTIAL_NAME = None  # Explicit GUI selection; never an automatic fallback.
 
 
 def configuration():
@@ -39,6 +40,12 @@ class Credential:
 
 def resolve_credential():
     config = configuration()
+    if _SESSION_CREDENTIAL_NAME is not None:
+        value = config.get(_SESSION_CREDENTIAL_NAME)
+        if not value:
+            raise RuntimeError('The explicitly selected Gemini credential is no longer configured')
+        _SEEN_SECRETS.add(value)
+        return Credential(_SESSION_CREDENTIAL_NAME, value)
     active = (config.get('GEMINI_ACTIVE_KEY') or '').strip()
     if active:
         if not re.fullmatch(r'[A-Za-z0-9_]+', active):
@@ -55,6 +62,40 @@ def resolve_credential():
             raise RuntimeError('Missing GEMINI_API_KEY or GOOGLE_API_KEY environment variable')
     _SEEN_SECRETS.add(value)
     return Credential(name, value)
+
+
+def configured_credentials():
+    """Safe display labels and private credentials; never display credential values."""
+    config = configuration()
+    names = sorted(name for name, value in config.items() if value and
+                   (name == 'GOOGLE_API_KEY' or re.fullmatch(r'GEMINI_API_KEY(?:_[A-Za-z0-9_]+)?', name)))
+    credentials, seen = [], set()
+    for name in names:
+        value = config[name]
+        if value in seen:
+            continue
+        seen.add(value)
+        _SEEN_SECRETS.add(value)
+        if name == 'GEMINI_API_KEY':
+            label = 'Project 1'
+        elif name == 'GOOGLE_API_KEY':
+            label = 'Google default'
+        else:
+            suffix = name.removeprefix('GEMINI_API_KEY_')
+            label = 'Project ' + suffix + (' (alternate)' if suffix == '1' else '')
+        # Only display safe profile names, even if an unusual env name embeds a key.
+        credentials.append((redact_text(label, 80), Credential(name, value)))
+    return credentials
+
+
+def select_credential(name):
+    """Called only after the user explicitly selects a configured profile."""
+    global _SESSION_CREDENTIAL_NAME
+    for _, credential in configured_credentials():
+        if credential.name == name:
+            _SESSION_CREDENTIAL_NAME = name
+            return credential
+    raise RuntimeError('Selected credential is no longer configured; refresh the configuration')
 
 
 def get_model(stage):
@@ -147,6 +188,42 @@ class InvalidResponseError(RuntimeError):
     kind = 'invalid_response'
 
 
+def _quota_identifiers(value):
+    """Read quota fields, excluding Help links and descriptive boilerplate."""
+    if isinstance(value, (list, tuple)):
+        for item in value:
+            yield from _quota_identifiers(item)
+    elif isinstance(value, dict):
+        for key, item in value.items():
+            if key in ('quotaId', 'quotaMetric', 'quota_id', 'quota_metric', 'quota_limit'):
+                if isinstance(item, str):
+                    yield redact_text(item, None)
+            elif key in ('error', 'details', 'violations'):
+                yield from _quota_identifiers(item)
+
+
+def _daily_request_quota(error):
+    identifiers = [re.sub(r'[^a-z0-9]', '', item.lower())
+                   for payload in (getattr(error, 'details', None),
+                                   getattr(error, 'response_json', None))
+                   for item in _quota_identifiers(payload)]
+    if identifiers:
+        # Tokens-per-day and spend limits must not be reported as RPD. When
+        # structured details exist they take precedence over generic prose.
+        return any('request' in item and 'perday' in item for item in identifiers)
+    message = getattr(error, 'message', None)
+    message = redact_text(message if isinstance(message, str) else str(error), None)
+    # Require an explicit exhaustion statement in the actual message. Merely
+    # listing daily/RPD limits in guidance, a URL or Help detail is insufficient.
+    quota = r'(?:daily\s+request\s+(?:quota|limit)|requests?\s+per\s+day\s+(?:quota|limit)|RPD\s+(?:quota|limit))'
+    exhausted = r'(?:exhausted|exceeded|depleted|reached)'
+    statement = r'(?:^|[.!?\n:])\s*'
+    return bool(re.search(statement + r'(?:your\s+|the\s+)?' + quota
+                          + r'\s+(?:(?:is|has\s+been|was)\s+)?' + exhausted + r'\b', message, re.I)
+                or re.search(statement + r'(?:you\s+(?:have\s+)?)?' + exhausted
+                             + r'\s+(?:your\s+|the\s+)?' + quota + r'\b', message, re.I))
+
+
 def classify_error(error):
     code = status_code(error)
     if getattr(error, 'kind', None) == 'invalid_response' or type(error).__name__ == 'ActivityResponseError':
@@ -156,9 +233,9 @@ def classify_error(error):
     if code == 429:
         # SDK QuotaFailure details contain quotaId/metric/dimensions. Daily wins
         # over RetryInfo, which may also be present on an exhausted daily quota.
-        detail = str(getattr(error, 'details', '')) + str(getattr(error, 'response_json', '')) + str(error)
+        detail = redact_text(str(getattr(error, 'details', '')) + str(getattr(error, 'response_json', '')) + str(error), None)
         normalized = re.sub(r'[^a-z0-9]', '', detail.lower())
-        if any(token in normalized for token in ('perday', 'daily', 'rpd', 'quotaexceeded')):
+        if _daily_request_quota(error):
             return ErrorInfo('daily_quota', False, 'Daily quota exhausted (RPD). Wait for reset or manually select an authorized project; no key rotation performed.', code)
         if any(token in normalized for token in ('perminute', 'persecond', 'rpm', 'tpm', 'ratelimitexceeded', 'toomanyrequests')) or retry_after(error) > 0:
             return ErrorInfo('rate_limit', True, 'Temporary request/token rate limit (RPM/TPM).', code)
@@ -169,7 +246,81 @@ def classify_error(error):
 
 
 def generate_with_retry(client, kwargs, progress=None, stats=None):
+    if isinstance(client, RequestSession):
+        return client.generate(kwargs, progress, stats)
     return call_with_retry(lambda: client.models.generate_content(**kwargs), progress, stats)
+
+
+class RequestSession:
+    """Pause one pending request on confirmed RPD; resume only by user decision.
+
+    The callback runs on the caller's worker thread. CLI callers omit it and
+    retain the existing bounded retry/error behavior. No request/media rebuild
+    or cache lookup is repeated when the credential changes.
+    """
+    def __init__(self, credential, on_daily_quota=None, *, factory=None):
+        self.credential = credential
+        self.on_daily_quota = on_daily_quota
+        self.factory = factory or create_client
+        self.owner = self.client = None
+
+    def __enter__(self):
+        self.owner = self.factory(self.credential)
+        self.client = self.owner.__enter__()
+        return self
+
+    def __exit__(self, *exc):
+        owner, self.owner, self.client = self.owner, None, None
+        if owner is not None:
+            return owner.__exit__(*exc)
+
+    def close(self):
+        self.__exit__(None, None, None)
+
+    def generate(self, kwargs, progress=None, stats=None):
+        while True:
+            try:
+                return call_with_retry(lambda: self.client.models.generate_content(**kwargs), progress, stats)
+            except Exception as error:
+                if classify_error(error).kind != 'daily_quota' or self.on_daily_quota is None:
+                    raise
+                replacement = self.on_daily_quota(self.credential)
+                if replacement is None:
+                    raise
+                if not isinstance(replacement, Credential) or replacement.key == self.credential.key:
+                    raise RuntimeError('Select a different configured project credential explicitly') from None
+                self.close()
+                self.credential = replacement
+                self.__enter__()
+                # Production V3/aggregation use inline media. Never replay a
+                # remote resource under a different project without Files.get.
+                self._verify_remote_resources(kwargs.get('contents'))
+
+    def _verify_remote_resources(self, contents):
+        if contents is None:
+            return
+        if isinstance(contents, (list, tuple)):
+            for item in contents:
+                self._verify_remote_resources(item)
+            return
+        if isinstance(contents, dict):
+            parts = contents.get('parts', [])
+            file_data = contents.get('file_data', contents.get('fileData'))
+            uri = contents.get('file_uri', contents.get('fileUri'))
+        else:
+            parts = getattr(contents, 'parts', None) or []
+            file_data = getattr(contents, 'file_data', None)
+            # The SDK accepts a Files API File object directly as content.
+            uri = getattr(contents, 'file_uri', None) or getattr(contents, 'uri', None)
+        for part in parts:
+            self._verify_remote_resources(part)
+        if file_data is not None:
+            self._verify_remote_resources(file_data)
+        if uri is not None:
+            match = re.fullmatch(r'(?:https://generativelanguage\.googleapis\.com/v1(?:beta)?/)?(files/[A-Za-z0-9_-]+)', uri or '')
+            if not match:
+                raise RuntimeError('Remote media must be explicitly authorized for the selected project; no upload performed')
+            get_project_file(self.client, match.group(1))
 
 
 def call_with_retry(operation, progress=None, stats=None, *, attempts=4):

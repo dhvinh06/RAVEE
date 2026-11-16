@@ -23,7 +23,12 @@ import cv2
 import pandas as pd
 from gemini_runtime import (resolve_credential, get_model, create_client, generation_config,
     generate_with_retry as _generate_with_retry, status_code as _status_code,
-    retry_after as _retry_after, classify_error, InvalidResponseError, redact_text)
+    retry_after as _retry_after, classify_error, InvalidResponseError, RequestSession, redact_text)
+
+# Recovery-only changes preserve the preceding implementation's cache namespace.
+# Bump this signature when grouping/validation semantics change. Prompt, model,
+# generation, reviewed records and media options remain separately keyed below.
+_BOUNDARY_IMPLEMENTATION_SIGNATURE = '5e63de13e5008d8f04311050297cb34b4e1a479c4f3c8f6f55f2811247a2d283'
 
 
 class ReviewCancelled(RuntimeError):
@@ -541,11 +546,11 @@ def _propose_window(client, video_path, records, types, progress=None, stats=Non
 
 
 def propose_task_groups(video_path, detailed_df, batch_segments=12, *, cache_dir=None, progress=None, stats=None,
-                        refresh_suggestions=False):
+                        refresh_suggestions=False, on_daily_quota=None):
     # One worker/request stream across review windows, including retry waits.
     with _REQUEST_LOCK:
         return _resumable_proposals(video_path, detailed_df, batch_segments, cache_dir, progress, stats,
-                                    refresh_suggestions)
+                                    refresh_suggestions, on_daily_quota)
 
 
 def _video_identity(video_path):
@@ -566,12 +571,13 @@ def _boundary_cache_key(identity, records, index, batch_segments, provenance=Non
                'prompt': _PROMPT, 'generation': provenance['generation'], 'batch_segments': batch_segments,
                'mode': os.getenv('RAVEE_SUGGEST_MODE', 'video').strip().lower(),
                'context': os.getenv('RAVEE_SUGGEST_CONTEXT_SECONDS', str(v3._CONTEXT_SECONDS)),
-               'implementation': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-               'encoder': hashlib.sha256(Path(v3.__file__).read_bytes()).hexdigest()}
+               'implementation': _BOUNDARY_IMPLEMENTATION_SIGNATURE,
+               'encoder': v3.AGGREGATION_ENCODER_SIGNATURE}
     return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
 
 
-def _resumable_proposals(video_path, detailed_df, batch_segments, cache_dir, progress, stats, refresh_suggestions):
+def _resumable_proposals(video_path, detailed_df, batch_segments, cache_dir, progress, stats, refresh_suggestions,
+                        on_daily_quota=None):
     """Explicit opt-in API operation; never called on import or by cache lookup."""
     import label_suggester  # retain existing .env loading, without changing V3
     from google import genai
@@ -584,7 +590,7 @@ def _resumable_proposals(video_path, detailed_df, batch_segments, cache_dir, pro
     report = stats if stats is not None else {}
     report.update(provenance=aggregation_provenance(records, batch_segments), warnings=[],
                   api_calls=0, cache_hits=0, fresh=0, fallback=0, unresolved=0,
-                  total=max(0, len(records) - 1), error='', boundary_sources=[])
+                  total=max(0, len(records) - 1), error='', error_kind='', error_message='', boundary_sources=[])
     if len(records) == 1:
         return singleton_groups(records)
     directory = Path(cache_dir) if cache_dir is not None else Path(__file__).resolve().parent.parent / 'temp/semantic_boundary_cache'
@@ -628,7 +634,7 @@ def _resumable_proposals(video_path, detailed_df, batch_segments, cache_dir, pro
             notify(f'Checking boundary {i + 1}/{len(decisions)}' + (' (refresh)' if refresh_suggestions else ''))
             try:
                 if client is None:
-                    client = create_client(credential)
+                    client = RequestSession(credential, on_daily_quota, factory=create_client)
                     client = client.__enter__()
                 # Two complete neighboring segments on each side expose the
                 # ongoing objective across batch/cache boundaries. They supply

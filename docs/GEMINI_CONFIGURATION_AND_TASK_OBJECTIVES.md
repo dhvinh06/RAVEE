@@ -23,8 +23,8 @@ client factory in `gemini_runtime.py` and the selected credential.
 Configuration is reread at the next explicit AI request. Process environment
 overrides `.env`; values initially loaded from `.env` are tracked so they do not
 mask subsequent file edits. An in-flight aggregation run keeps its selected
-client/model, rather than switching projects between batches. No key rotation
-occurs on an error. Switching keys does not call or invalidate preprocessing,
+model and client unless the user explicitly selects a replacement credential
+in quota recovery. No automatic key rotation occurs on an error. Switching keys does not call or invalidate preprocessing,
 IDT, FV or FINCH, and credential identity is excluded from local AI result keys.
 Media settings retain their existing startup environment behavior.
 
@@ -54,6 +54,68 @@ Redaction covers every configured profile, inactive profiles and credentials
 already used during this session. Credentials are hidden in object reprs and
 are excluded from caches, result metadata and GUI messages. Existing evidence
 validation and redacted diagnostics remain active.
+
+## User-confirmed daily quota recovery
+
+Label Suggester and Semantic Review show a nonmodal Tkinter dialog only when a
+429 response explicitly identifies a per-day **request** quota (for example a
+`RequestsPerDay` quota ID in structured quota violations, or a direct statement
+that a daily request/RPD quota is exhausted). Structured quota fields take
+precedence over message prose. Tokens-per-day limits, spend limits, Help links,
+and advice to check daily/RPD quotas do not establish RPD exhaustion. A bare 429 or generic
+"quota exceeded" message is not proof of daily exhaustion and does not open
+this dialog. Temporary RPM/TPM limits and 503s retain bounded retries;
+authentication and invalid structured responses retain their separate errors.
+
+- **Continue manually** stops the pending request and disables further new AI
+  requests for this review window. Cached label suggestions remain usable.
+  Manual editing, playback, commit, task confirmation and export remain available.
+- **Select credential** explicitly chooses an alternative configured credential
+  from safe display names: `Project 1` for `GEMINI_API_KEY`, `Project 2` for
+  `GEMINI_API_KEY_2`, `Project RESEARCH` for `GEMINI_API_KEY_RESEARCH`, and
+  `Google default` for `GOOGLE_API_KEY`. Duplicate key values are omitted;
+  values are never displayed. Keys in the same project still share provider limits.
+  Selection applies to both AI stages for the remainder of this application
+  session, without rewriting `.env`; restarting uses environment configuration.
+- **Cancel**, including closing the dialog, stops the pending request and
+  returns to the unchanged review. A later AI request requires another explicit
+  user action. It can reuse completed cached boundaries. It does not cancel
+  labeling or task review.
+
+The worker waits on an Event; Tkinter keeps running without a modal grab or
+nested event loop. One quota dialog is visible at a time and each review guards
+against duplicate AI requests. Switching credentials closes the old client and
+recreates it through the shared factory on the worker. Only the pending request
+is resubmitted, with the same model, media, configuration and target. Completed
+batches and cache hits are not submitted again, including during a forced
+refresh. A newly selected exhausted project requires another user decision.
+
+Committed labels, uncommitted text, selection and task edit history are not
+changed by quota recovery. Recovered task proposals are staged behind **Load
+recovered proposals**, so edits made while paused are not overwritten by an
+asynchronous result. Loading is explicit; Undo restores the previous task
+groups, pending form text, selection and adopted provenance. Cancelling/manual
+recovery never applies partial task proposals. Valid partial AI results stay
+in the boundary cache for a later explicit request.
+
+Production requests use inline media. If a pending request contains a Gemini
+Files reference, it must pass `files.get` with the replacement client before
+resubmission, including direct SDK `File` objects and snake/camel-case media
+dictionaries; foreign/expired resources fail safely and no replacement upload
+is performed. Closing the review releases any waiting worker.
+
+This recovery-only update retains the previous semantic implementation/encoder
+cache signatures because prompts, media encoding, validation and grouping are
+unchanged. Reviewed input, model, generation configuration, prompt and media
+settings remain part of cache identity. Changes to encoding/grouping semantics
+must bump their corresponding explicit signature. No existing cache is deleted
+or migrated, and credentials do not enter result cache identity.
+
+`tests/test_quota_recovery.py` exercises all three decisions through both review
+entry points with mocked Tk widgets and provider clients, worker/Event lifetimes,
+duplicate prevention, partial-batch continuation, later cache-based resumption,
+remote-file isolation and prior cache-key compatibility. These tests do not
+certify native desktop rendering, live quota payloads or provider permissions.
 
 ## Project resources and uploads
 
