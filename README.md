@@ -64,6 +64,12 @@ currently defaults to `gemini-3.5-flash-lite`. Do not commit keys. Media setting
 are `RAVEE_SUGGEST_MODE=video|frames` and `RAVEE_SUGGEST_CONTEXT_SECONDS` (0-10,
 default 3). Manual labeling/review remains available without Gemini.
 
+Multiple numeric/named credentials are supported through `GEMINI_ACTIVE_KEY`;
+see `.env.example`. Optional `GEMINI_LABEL_MODEL` and `GEMINI_AGGREGATION_MODEL`
+override the model independently. [Configuration, quota handling, intermediate
+task objectives and comparison snapshots](docs/GEMINI_CONFIGURATION_AND_TASK_OBJECTIVES.md)
+describe the explicit request workflow and preserved baselines.
+
 ## Run the application
 
 Non-demo mode is selected by `DEMO = False` in `toolbox/main.py`.

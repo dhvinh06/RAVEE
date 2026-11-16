@@ -185,7 +185,8 @@ class SemanticPreviewWorkflowTests(unittest.TestCase):
 class SegmentScopeTests(unittest.TestCase):
     def setUp(self):
         env = patch.dict(os.environ, {'GEMINI_API_KEY': 'offline-only', 'GOOGLE_API_KEY': '',
-            'RAVEE_SUGGEST_MODE': 'video', 'RAVEE_SUGGEST_CONTEXT_SECONDS': '3'})
+            'RAVEE_SUGGEST_MODE': 'video', 'RAVEE_SUGGEST_CONTEXT_SECONDS': '3',
+            'GEMINI_MODEL': 'gemini-3.5-flash-lite'})
         env.start()
         self.addCleanup(env.stop)
 

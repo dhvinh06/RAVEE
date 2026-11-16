@@ -16,11 +16,14 @@ import os
 import re
 import sys
 import time
+import uuid
 from pathlib import Path
 from typing import Any
 
 import cv2
 from google import genai
+from gemini_runtime import (resolve_credential, create_client, get_project_file,
+    upload_project_file, call_with_retry, classify_error, redact_text)
 
 DEFAULT_VIDEO = Path("DemoFiles") / "scan_video_reduced.avi"
 DEFAULT_MODEL = "gemini-3.8-flash"
@@ -134,9 +137,9 @@ def state_name(file_obj: Any) -> str:
 
 
 def upload_and_wait(client: genai.Client, video_path: Path, poll_seconds: int,
-                    timeout_seconds: int) -> Any:
+                    timeout_seconds: int, *, authorized=False) -> Any:
     print("Uploading video to Gemini Files API...")
-    uploaded = client.files.upload(file=str(video_path))
+    uploaded = upload_project_file(client, video_path, authorized=authorized)
     if not getattr(uploaded, "name", None) or not getattr(uploaded, "uri", None):
         raise RuntimeError("Gemini upload did not return a usable file name/URI.")
 
@@ -156,14 +159,14 @@ def upload_and_wait(client: genai.Client, video_path: Path, poll_seconds: int,
             )
         print(f"Video processing state: {state or 'unknown'}; checking again...")
         time.sleep(poll_seconds)
-        uploaded = client.files.get(name=uploaded.name)
+        uploaded = get_project_file(client, uploaded.name)
 
 
 def get_existing_upload_and_wait(client: genai.Client, file_name: str,
                                  poll_seconds: int, timeout_seconds: int) -> Any:
     """Reuse an existing Gemini Files API upload instead of uploading again."""
     print(f"Reusing existing Gemini file: {file_name}")
-    uploaded = client.files.get(name=file_name)
+    uploaded = get_project_file(client, file_name)
     deadline = time.monotonic() + timeout_seconds
 
     while True:
@@ -181,36 +184,19 @@ def get_existing_upload_and_wait(client: genai.Client, file_name: str,
             )
         print(f"Existing file state: {state or 'unknown'}; checking again...")
         time.sleep(poll_seconds)
-        uploaded = client.files.get(name=file_name)
+        uploaded = get_project_file(client, file_name)
 
 
 def is_retryable_service_error(exc: Exception) -> bool:
-    message = str(exc).lower()
-    return (
-            "503" in message
-            or "service_unavailable" in message
-            or "service unavailable" in message
-            or "currently experiencing high demand" in message
-    )
+    return classify_error(exc).kind == 'service_unavailable'
 
 
 def create_interaction_with_retry(client: genai.Client, model: str,
                                   input_parts: list[dict[str, Any]],
                                   max_retries: int) -> Any:
     """Retry transient 503 capacity errors with exponential backoff."""
-    for attempt in range(max_retries + 1):
-        try:
-            return client.interactions.create(model=model, input=input_parts)
-        except Exception as exc:
-            if not is_retryable_service_error(exc) or attempt >= max_retries:
-                raise
-            delay = min(60, 10 * (2 ** attempt))
-            print(
-                f"Gemini returned a temporary 503 capacity error. "
-                f"Retry {attempt + 1}/{max_retries} in {delay}s..."
-            )
-            time.sleep(delay)
-    raise RuntimeError("Gemini request failed after retries.")
+    return call_with_retry(lambda: client.interactions.create(model=model, input=input_parts),
+                           progress=print, attempts=max_retries + 1)
 
 
 def extract_json(text: str) -> Any | None:
@@ -252,15 +238,16 @@ def main() -> int:
         "--retries", type=int, default=4,
         help="Number of retries for temporary Gemini 503 capacity errors (default: 4).",
     )
+    parser.add_argument('--allow-upload', action='store_true',
+                        help='Explicitly authorize a new video upload to the selected project')
     args = parser.parse_args()
 
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        print(
-            "ERROR: GEMINI_API_KEY is not set. Create an API key in Google AI "
-            "Studio and set it in PowerShell before running this script.",
-            file=sys.stderr,
-        )
+    try:
+        credential = resolve_credential()
+        if not args.reuse_file and not args.allow_upload:
+            raise RuntimeError('A new upload requires --allow-upload; --reuse-file verifies ownership in the selected project')
+    except RuntimeError as error:
+        print('ERROR: ' + redact_text(error), file=sys.stderr)
         return 2
     if args.fps <= 0:
         print("ERROR: --fps must be greater than 0.", file=sys.stderr)
@@ -272,9 +259,10 @@ def main() -> int:
     fps, frame_count, _ = get_video_info(args.video)
     prompt = build_prompt(fps, frame_count)
 
-    client = genai.Client(api_key=api_key)
+    client = None
     uploaded = None
     try:
+        client = create_client(credential)
         if args.reuse_file:
             uploaded = get_existing_upload_and_wait(
                 client,
@@ -288,9 +276,10 @@ def main() -> int:
                 args.video,
                 poll_seconds=args.poll_seconds,
                 timeout_seconds=args.timeout_seconds,
+                authorized=args.allow_upload,
             )
 
-        print(f"Calling model: {args.model}")
+        print("Calling model: " + redact_text(args.model))
         print(f"Video sampling: static at {args.fps} FPS")
         input_parts = [
             {
@@ -317,13 +306,17 @@ def main() -> int:
                 "Gemini returned no output_text. Inspect the API response or SDK version."
             )
 
-        output_path = args.video.with_name(args.video.stem + "_gemini_labels.txt")
+        output_text = redact_text(output_text, limit=None)
+        result_stem = args.video.stem + '_gemini_labels'
+        if any(args.video.with_name(result_stem + suffix).exists() for suffix in ('.txt', '.json')):
+            result_stem += '_' + uuid.uuid4().hex
+        output_path = args.video.with_name(result_stem + '.txt')
         output_path.write_text(output_text, encoding="utf-8")
         print(f"\nRaw response saved to: {output_path.resolve()}")
 
         parsed = extract_json(output_text)
         if parsed is not None:
-            json_path = args.video.with_name(args.video.stem + "_gemini_labels.json")
+            json_path = args.video.with_name(result_stem + '.json')
             json_path.write_text(
                 json.dumps(parsed, ensure_ascii=False, indent=2),
                 encoding="utf-8",
@@ -343,13 +336,20 @@ def main() -> int:
         return 0
 
     except Exception as exc:
-        print(f"\nERROR: {type(exc).__name__}: {exc}", file=sys.stderr)
+        print("\nERROR: " + classify_error(exc).message, file=sys.stderr)
         print(
             "The uploaded file, if any, may remain in Gemini Files storage "
             "temporarily (Files API uploads expire after 48 hours).",
             file=sys.stderr,
         )
         return 1
+
+    finally:
+        if client is not None:
+            try:
+                client.close()
+            except Exception:
+                print('Gemini client cleanup failed; saved results remain available.', file=sys.stderr)
 
 
 if __name__ == "__main__":

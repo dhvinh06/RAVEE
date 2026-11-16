@@ -43,7 +43,7 @@ class ImportTests(unittest.TestCase):
                 'toolbox.pipeline_cache', 'toolbox.display_video_snippets',
                 'toolbox.event_log_creation', 'toolbox.semantic_aggregation',
                 'label_suggester', 'gui.gui_elements', 'gui.semantic_review',
-                'gui.theme', 'gui.video_selection', 'gui.video_preview',
+                'gui.theme', 'gui.video_selection', 'gui.video_preview', 'gemini_runtime',
                 'toolbox.main', 'integrate_label_suggester', 'make_contact_sheet',
             ]
             with patch('socket.socket.connect', forbidden), \\
@@ -59,7 +59,7 @@ class ImportTests(unittest.TestCase):
         result = subprocess.run([sys.executable, '-B', '-c', script], cwd=ROOT,
                                 capture_output=True, text=True, timeout=60)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn('Imported 25 application/utility module paths', result.stdout)
+        self.assertIn('Imported 26 application/utility module paths', result.stdout)
 
 
 if __name__ == '__main__':

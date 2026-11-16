@@ -9,12 +9,13 @@ import cv2
 from PIL import Image, ImageTk
 from gui.theme import COLORS, apply_theme, fit_window, style_text, workspace_header
 from gui.video_preview import resize_preview_image
+from gemini_runtime import get_model, redact_text
 
 from toolbox.semantic_aggregation import GroupEditor, ReviewCancelled, segment_records, propose_task_groups
 
 
 def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_mapping=None, offline=False,
-                       refresh_suggestions=False):
+                       refresh_suggestions=False, run_metadata=None):
     records = segment_records(detailed_df)
     editor = GroupEditor(records, initial_groups, task_mapping)
     by_id = {row['segment_id']: row for row in records}
@@ -192,8 +193,14 @@ def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_map
                     or evaluation['right_segment_id'] in group['source_segment_ids']):
                 source = evaluation['source']
                 source = 'OLD cached fallback — NOT fresh' if source == 'fallback' else source
-                lines.append(f'Boundary {evaluation["left_segment_id"]} → '
+                lines.append(f'Boundary {evaluation["left_segment_id"]} -> '
                              f'{evaluation["right_segment_id"]}: {source}')
+                decision = evaluation.get('decision') or {}
+                for field in ('objective_before', 'objective_after', 'objective_transition',
+                              'objective_scope', 'task_boundary', 'operation_relation',
+                              'transition_evidence', 'evidence'):
+                    if field in decision:
+                        lines.append(f'  {field}: {redact_text(decision[field], 2000)}')
         for sid in group['source_segment_ids']:
             row = by_id[sid]
             lines.append(f'Segment {sid}: {row["activity"]}\nFrames {row["start_frame"]}-{row["end_frame"]}\n'
@@ -288,7 +295,7 @@ def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_map
             return
         refresh_suggestions = False  # CLI arms one explicit request; Refresh always forces a new one.
         lock(True)
-        status.set('Gemini is proposing adjacent task groups. You must still review and confirm.')
+        status.set(f'{redact_text(get_model("aggregation"), 80)} is proposing adjacent task groups. Review and confirm intermediate objectives.')
 
         def worker():
             try:
@@ -311,20 +318,25 @@ def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_map
                     continue
                 lock(False)
                 if kind == 'error':
-                    status.set('AI unavailable; current groups preserved. Manual review still works. ' + detail[:220])
+                    status.set('AI unavailable; current groups preserved. Manual review still works. ' + redact_text(detail, 220))
                 else:
                     boundary_sources = detail['boundary_sources']
+                    if run_metadata is not None:
+                        run_metadata['ai_provenance'] = detail.get('provenance', {})
+                        run_metadata['api_calls'] = detail.get('api_calls', 0)
                     if detail['total'] > 0 and detail['unresolved'] == detail['total']:
                         status.set('AI unavailable; current groups preserved. All boundaries remain '
-                                   f"unresolved for manual review ({detail['error']}). Try again later to resume.")
+                                   f"unresolved for manual review ({detail.get('error_message') or detail['error']}).")
                         continue
                     editor.replace(payload)
                     refresh()
                     status.set(f"Proposals ready, not confirmed: {detail['api_calls']} API calls; "
                                f"{detail['fresh']} fresh; {detail['cache_hits']} reused "
                                f"({detail['fallback']} OLD fallbacks); {detail['unresolved']} unresolved. "
-                               f"{detail['error'] + '; ' if detail['error'] else ''}"
+                               f"{(detail.get('error_message') or detail['error']) + '; ' if detail['error'] else ''}"
                                'Review, merge or split manually before confirming.')
+                    if detail.get('warnings'):
+                        status.set(status.get() + ' Review warning: ' + ' '.join(detail['warnings']))
         except Empty:
             pass
         polling = root.after(150, poll)

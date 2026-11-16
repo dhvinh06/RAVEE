@@ -137,3 +137,70 @@ Focused offline checks:
 ```powershell
 python -B -m unittest tests.test_review_preview_and_label_accuracy -v
 ```
+
+
+## Hydrogen GenerateContent compatibility and response diagnostics
+
+The old `_clean_label()` caught JSON parsing/type errors, missing fields and wrong
+field types under the same `invalid evidence-based activity response` message.
+It required an object with string `label`/`evidence`, boolean `target_visible`,
+`uncertainty` in low/medium/high and the existing `bow_action` enum. That message
+alone cannot reveal whether a particular response was valid JSON, empty,
+truncated or missing a field. No raw response from the reported failure was saved,
+so its precise branch cannot be reconstructed offline.
+
+Verified request defects were an undeclared response schema (MIME type alone)
+and applying the old 512-token output cap to Hydrogen's default high thinking.
+The installed Google GenAI SDK 3.3.0 supports the required GenerateContent fields.
+The application continues to use `client.models.generate_content`, not the
+Interactions API. It now sends `response_mime_type='application/json'` and a
+`response_json_schema` declaring the existing five fields and their types/enums.
+No activity prompt or media encoding changes were made for this compatibility fix.
+
+Only `gemini-4-hydrogen` and its model-resource/version forms receive the Hydrogen
+profile: `thinking_level=LOW`, `max_output_tokens=65536`, with no temperature,
+top-p, top-k, thinking budget or MINIMAL setting. Google recommends removing
+legacy small output caps because the ceiling includes thinking and the final
+answer. This ceiling permits reasoning; it does not request 64K output. LOW is a
+supported cost/latency-oriented level, but its accuracy on these videos still
+requires live evaluation. The old model retains temperature 0.1, a 512-token cap
+and its previous thinking default. Default model selection and `.env` are unchanged.
+
+Invalid-response diagnostics use the standard `label_suggester` logger at ERROR
+level (stderr / IntelliJ Run console unless the caller configures another handler).
+They include requested model, exact failed rule, redacted/bounded response text,
+JSON validity/parsed JSON, candidate finish reasons/messages, prompt block reason,
+empty/truncated flags and available token counts. Missing metadata is marked
+unknown rather than assumed to prove truncation. HTTP/API exceptions are logged
+separately with available code/status and redacted message/details. Request bodies,
+headers, API keys, thought text and full response objects are not dumped. No log
+file or Gemini result is overwritten. The GUI receives the model and failed rule
+at the start of the error message, within its existing shortened display.
+
+`MAX_TOKENS`, blocked candidates and other unsuccessful finish reasons never
+produce accepted labels, even when the text happens to parse. Lists/objects in
+`evidence` are rejected, not stringified. SDK `response.parsed` is not used to
+rescue missing or malformed response text; the SDK derives it from that same
+text and a schema dictionary does not replace application validation. Valid
+insufficient-evidence responses still return `Unclear activity`, as before.
+No automatic retries of malformed responses, model switches or evidence fabrication
+were introduced. Supported syntax/types do not guarantee semantic accuracy.
+
+Caches, aggregation, human review and the IDT subsystem were not modified by this
+fix. Existing model-specific cache separation remains. As already documented, the
+boundary key fingerprints V3 source, so this code update changes that conservative
+fingerprint while preserving old files; requests remain explicit.
+
+Official references checked for this implementation:
+
+- [Hydrogen migration and thinking/output limits](https://aistudio.google.com/docs/whats-new-gemini-4-hydrogen)
+- [GenerateContent structured output configuration](https://aistudio.google.com/docs/structured-output?generate-content=true)
+- [Hydrogen input/capability support](https://aistudio.google.com/docs/models/gemini-4-hydrogen)
+- [GenerateContent response and finish metadata](https://aistudio.google.com/api-reference/generate-content)
+
+Offline regression fixtures are synthetic, not captured live Hydrogen responses:
+
+```powershell
+python -B -m unittest tests.test_hydrogen_responses -v
+python -B -m unittest discover -s tests -t .
+```

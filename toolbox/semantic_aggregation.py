@@ -15,11 +15,15 @@ import random
 import time
 import threading
 import warnings
+import uuid
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 
 import cv2
 import pandas as pd
+from gemini_runtime import (resolve_credential, get_model, create_client, generation_config,
+    generate_with_retry as _generate_with_retry, status_code as _status_code,
+    retry_after as _retry_after, classify_error, InvalidResponseError, redact_text)
 
 
 class ReviewCancelled(RuntimeError):
@@ -174,6 +178,12 @@ class GroupEditor:
 
 
 _PROMPT = '''Discover task-objective-level work from the supplied chronological segments.
+Hierarchy: a SEGMENT is one FINCH action interval. A TASK combines adjacent actions
+serving a distinct immediate intermediate work objective or observable intermediate result.
+A PROCESS is the overall workflow composed of multiple tasks; it is NOT a task merely
+because all work contributes to one finished product or takes place on the same object.
+The same physical object can undergo several independently completed intermediate tasks.
+Name the specific next observable state/result being pursued now, not the final process goal.
 An atomic action describes a movement or technique. A task is a bounded sequence producing
 ONE concrete observable result on a target or assembly. Different verbs can be phases of ONE
 task; do not turn every action, technique change or FINCH boundary into a task boundary.
@@ -192,6 +202,12 @@ held part and uninterrupted handling. A change of held component or tool can ser
 target objective, but requires visible evidence linking those components to that result.
 Similar-looking objects or use of the same tool do not establish object identity or a task.
 For EVERY boundary between consecutive segments, inspect the transition context and decide:
+0. State objective_before and objective_after: the immediate intermediate results pursued
+   on either side. Explain in transition_evidence whether the second action continues,
+   retries, corrects, inspects or completes the first result, or starts a different result.
+   Set objective_transition to same_intermediate_result, different_intermediate_result,
+   or unclear. Set objective_scope to intermediate, process, or unclear. Shared contribution
+   to a process and uninterrupted handling of one object are insufficient reasons to merge.
 1. Is this visibly the same object, a related component of the same target task,
    a different target, or is identity unclear?
 2. Is the concrete intended result the same, different, or unclear?
@@ -243,7 +259,10 @@ a changed atomic operation; task_boundary determines whether it begins a new tas
 An inspection must be supported by visible continuity on BOTH sides to bridge repeated work.
 If evidence is insufficient or occluded, use unclear/high and keep that boundary separate.
 Boundary evidence must be assessed even if your initial groups are singletons; it will be used
-to reconcile over-fragmented proposals. Never invent IDs, change frames or invent evidence.'''
+to reconcile over-fragmented proposals. Also return the five intermediate-objective fields
+specified above on every boundary. Do not compare objective strings lexically: explain the
+visible result/state transition. A process-level rationale cannot justify a task-level merge.
+Never invent IDs, change frames or invent evidence.'''
 
 
 def _boundary_decisions(boundaries, records):
@@ -277,6 +296,18 @@ def _boundary_decisions(boundaries, records):
                     or (decision['task_boundary'] == 'continuing'
                         and not decision['task_objective'].strip())):
                 raise ValueError('Invalid task objective evidence')
+        fields = ('objective_before', 'objective_after', 'objective_transition',
+                  'objective_scope', 'transition_evidence')
+        if any(field in decision for field in fields):
+            if (any(not isinstance(decision.get(field), str) for field in fields)
+                    or any(not decision[field].strip() or len(decision[field]) > 150
+                           for field in ('objective_before', 'objective_after'))
+                    or decision['objective_transition'] not in
+                        ('same_intermediate_result', 'different_intermediate_result', 'unclear')
+                    or decision['objective_scope'] not in ('intermediate', 'process', 'unclear')
+                    or not decision['transition_evidence'].strip()
+                    or len(decision['transition_evidence']) > 2000):
+                raise ValueError('Invalid immediate-objective boundary evidence')
     return boundaries
 
 
@@ -322,6 +353,9 @@ def _protect_proposals(groups, records, boundaries):
             and (not unknown_action or (explicit_task and decision['uncertainty'] == 'low'))
             and decision['uncertainty'] != 'high'
             and bool(decision['evidence'].strip()) and bool(decision['suggested_task_label'].strip()))
+        if 'objective_transition' in decision:
+            join = (join and decision['objective_transition'] == 'same_intermediate_result'
+                    and decision['objective_scope'] == 'intermediate')
         # Pairwise sameness alone can drift from objective A through an ambiguous
         # middle segment into B. Keep one explicit objective across the whole run.
         if join and objective and ongoing_objective and objective != ongoing_objective:
@@ -412,65 +446,87 @@ _GENERATION_CONFIG = dict(temperature=0.1, max_output_tokens=8192, response_mime
 _BOUNDARY_CACHE_VERSION = 1
 
 
-def _status_code(error):
-    value = getattr(error, 'code', None) or getattr(error, 'status_code', None)
-    if value is None:
-        value = getattr(getattr(error, 'response', None), 'status_code', None)
-    try:
-        return int(value)
-    except (ValueError, TypeError):
-        return None
+def _aggregation_schema():
+    string = {'type': 'string'}
+    def enum(*values):
+        return dict(type='string', enum=list(values))
+    group = dict(start_frame={'type': 'integer'}, end_frame={'type': 'integer'},
+        source_segment_ids=dict(type='array', items={'type': 'integer'}),
+        suggested_task_label=string, explanation=string, same_objective={'type': 'boolean'},
+        uncertainty=enum('low', 'medium', 'high'))
+    boundary = dict(left_segment_id={'type': 'integer'}, right_segment_id={'type': 'integer'},
+        object_continuity=enum('same', 'related', 'different', 'unclear'),
+        objective_continuity=enum('same', 'different', 'unclear'),
+        operation_relation=enum('preparation', 'execution', 'continuation', 'retry', 'correction',
+            'refinement', 'inspection_pause', 'completion_check', 'new_operation', 'unclear'),
+        task_boundary=enum('continuing', 'new_task', 'unclear'), task_objective=string,
+        uncertainty=enum('low', 'medium', 'high'), evidence=string, suggested_task_label=string,
+        objective_before=string, objective_after=string,
+        objective_transition=enum('same_intermediate_result', 'different_intermediate_result', 'unclear'),
+        objective_scope=enum('intermediate', 'process', 'unclear'), transition_evidence=string)
+    return dict(type='object', required=['groups', 'boundaries'], properties={
+        name: dict(type='array', items=dict(type='object', required=list(properties), properties=properties))
+        for name, properties in [('groups', group), ('boundaries', boundary)]})
 
 
-def _retry_after(error):
-    headers = getattr(getattr(error, 'response', None), 'headers', {}) or {}
-    value = next((v for k, v in headers.items() if k.lower() == 'retry-after'), None)
-    if value is None:
-        return 0.
-    try:
-        delay = float(value)
-    except (ValueError, TypeError):
-        try:
-            delay = (parsedate_to_datetime(value) - datetime.now(timezone.utc)).total_seconds()
-        except (ValueError, TypeError, OverflowError):
-            return 0.
-    return max(0., delay) if math.isfinite(delay) else 0.
+_AGGREGATION_SCHEMA = _aggregation_schema()
 
 
-def _generate_with_retry(client, kwargs, progress=None, stats=None):
-    waited = 0.
-    for attempt in range(4):
-        if stats is not None:
-            stats['api_calls'] += 1
-        try:
-            return client.models.generate_content(**kwargs)
-        except Exception as error:
-            if _status_code(error) not in {429, 500, 502, 503, 504} or attempt == 3:
-                raise
-            delay = max(_retry_after(error), random.uniform(0., min(16., 2. ** attempt)))
-            # Never retry earlier than Retry-After. Stop instead if it exceeds
-            # the bounded wait budget; the next explicit request can resume.
-            if waited + delay > 60:
-                raise
-            if progress:
-                progress(f'Gemini HTTP {_status_code(error)}; retry {attempt + 1}/3 in {delay:.1f}s')
-            time.sleep(delay)
-            waited += delay
+def _aggregation_config(model, types):
+    return generation_config(model, types, _GENERATION_CONFIG, _AGGREGATION_SCHEMA)
 
 
-def _propose_window(client, video_path, records, types, progress=None, stats=None, context_records=None):
+def aggregation_provenance(records, batch_segments=12):
+    from google.genai import types
+    model = get_model('aggregation')
+    return dict(model=model, label_model=get_model('label'),
+        generation=_aggregation_config(model, types).model_dump(mode='json', exclude_none=True),
+        prompt_sha256=hashlib.sha256(_PROMPT.encode()).hexdigest(),
+        reviewed_segments_sha256=hashlib.sha256(json.dumps(records, sort_keys=True).encode()).hexdigest(),
+        batch_segments=batch_segments, mode=os.getenv('RAVEE_SUGGEST_MODE', 'video').strip().lower(),
+        context_seconds=os.getenv('RAVEE_SUGGEST_CONTEXT_SECONDS', '3.0'))
+
+
+def grouping_diagnostics(groups, decisions):
+    """Nonblocking evidence warnings; never split or issue another request."""
+    warnings = []
+    for group in groups:
+        ids = set(group['source_segment_ids'])
+        internal = [d for d in decisions if d['left_segment_id'] in ids and d['right_segment_id'] in ids]
+        if len(ids) < 2:
+            continue
+        if any(d.get('objective_scope') == 'process' or
+               d.get('objective_transition') == 'different_intermediate_result' or
+               d.get('task_boundary') == 'new_task' or d.get('objective_continuity') == 'different'
+               for d in internal):
+            warnings.append('A proposed group spans evidence of different intermediate objectives or only a process-level rationale. Inspect its boundaries.')
+        elif len(groups) == 1 and len(internal) > 0 and any('objective_before' not in d for d in internal):
+            warnings.append('One group covers the complete sequence, but intermediate-objective evidence is missing. Inspect boundary explanations before confirming.')
+    return list(dict.fromkeys(warnings))
+
+
+def _propose_window(client, video_path, records, types, progress=None, stats=None, context_records=None, model=None):
+    model = model or get_model('aggregation')
     response = _generate_with_retry(client, dict(
-        model=os.getenv('GEMINI_MODEL', 'gemini-3.5-flash-lite'),
+        model=model,
         contents=types.Content(parts=[types.Part(text=_PROMPT),
                                      types.Part(text=json.dumps({'segments': records,
                                          'context_segments': list(context_records or []),
                                          'context_usage': 'Context only: never output these IDs in groups or boundaries'}))]
                                + _media_parts(video_path, records, types, context_records)),
-        config=types.GenerateContentConfig(**_GENERATION_CONFIG),
+        config=_aggregation_config(model, types),
     ), progress, stats)
     try:
-        result = json.loads(response.text or '')
+        reasons = [getattr(getattr(candidate, 'finish_reason', None), 'value',
+                           getattr(candidate, 'finish_reason', None))
+                   for candidate in (getattr(response, 'candidates', None) or [])]
+        if any(reason not in (None, 'STOP', 'FINISH_REASON_UNSPECIFIED') for reason in reasons):
+            raise ValueError('Model did not complete a valid structured response')
+        result = json.loads(redact_text(response.text or '', limit=None))
         groups = _protect_proposals(result['groups'], records, result['boundaries'])
+        if stats is not None:
+            stats.setdefault('warnings', []).extend(grouping_diagnostics(result['groups'], result['boundaries']))
+            stats.setdefault('proposed_groups', []).extend(deepcopy(result['groups']))
         effective = deepcopy(result['boundaries'])
         # Cache the validated decision, including group-level vetoes, rather
         # than forgetting uncertainty when the result is later resumed.
@@ -481,7 +537,7 @@ def _propose_window(client, video_path, records, types, progress=None, stats=Non
                 decision['object_continuity'] = 'unclear'
         return effective
     except (ValueError, KeyError, TypeError) as error:
-        raise RuntimeError(f'Invalid semantic aggregation response: {error}') from error
+        raise InvalidResponseError(f'Invalid semantic aggregation response: {redact_text(error, 250)}') from None
 
 
 def propose_task_groups(video_path, detailed_df, batch_segments=12, *, cache_dir=None, progress=None, stats=None,
@@ -501,12 +557,13 @@ def _video_identity(video_path):
     return {'path': str(path), 'sha256': digest.hexdigest()}
 
 
-def _boundary_cache_key(identity, records, index, batch_segments):
+def _boundary_cache_key(identity, records, index, batch_segments, provenance=None):
     import label_suggester as v3
+    provenance = provenance or aggregation_provenance(records, batch_segments)
     payload = {'version': _BOUNDARY_CACHE_VERSION, 'video': identity, 'records': records,
                'frames': [records[index]['start_frame'], records[index + 1]['end_frame']],
-               'model': os.getenv('GEMINI_MODEL', 'gemini-3.5-flash-lite'),
-               'prompt': _PROMPT, 'generation': _GENERATION_CONFIG, 'batch_segments': batch_segments,
+               'model': provenance['model'],
+               'prompt': _PROMPT, 'generation': provenance['generation'], 'batch_segments': batch_segments,
                'mode': os.getenv('RAVEE_SUGGEST_MODE', 'video').strip().lower(),
                'context': os.getenv('RAVEE_SUGGEST_CONTEXT_SECONDS', str(v3._CONTEXT_SECONDS)),
                'implementation': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
@@ -523,18 +580,18 @@ def _resumable_proposals(video_path, detailed_df, batch_segments, cache_dir, pro
     records = segment_records(detailed_df)
     if type(batch_segments) is not int or not 2 <= batch_segments <= 24:
         raise ValueError('batch_segments must be an integer between 2 and 24')
-    api_key = os.getenv('GOOGLE_API_KEY') or os.getenv('GEMINI_API_KEY')
-    if not api_key:
-        raise RuntimeError('Missing GEMINI_API_KEY or GOOGLE_API_KEY environment variable')
+    credential = resolve_credential()
     report = stats if stats is not None else {}
-    report.update(api_calls=0, cache_hits=0, fresh=0, fallback=0, unresolved=0,
+    report.update(provenance=aggregation_provenance(records, batch_segments), warnings=[],
+                  api_calls=0, cache_hits=0, fresh=0, fallback=0, unresolved=0,
                   total=max(0, len(records) - 1), error='', boundary_sources=[])
     if len(records) == 1:
         return singleton_groups(records)
     directory = Path(cache_dir) if cache_dir is not None else Path(__file__).resolve().parent.parent / 'temp/semantic_boundary_cache'
     directory.mkdir(parents=True, exist_ok=True)
     identity = dict(_video_identity(video_path), case=str(detailed_df['videoID'].iloc[0]))
-    keys = [_boundary_cache_key(identity, records, i, batch_segments) for i in range(len(records) - 1)]
+    report['provenance']['video'] = identity
+    keys = [_boundary_cache_key(identity, records, i, batch_segments, report['provenance']) for i in range(len(records) - 1)]
     decisions = [None] * len(keys)
     old_decisions = [None] * len(keys)
     sources = ['unresolved'] * len(keys)
@@ -546,6 +603,7 @@ def _resumable_proposals(video_path, detailed_df, batch_segments, cache_dir, pro
             checksum = hashlib.sha256(json.dumps(decision, sort_keys=True).encode()).hexdigest()
             if cached['complete'] is True and cached['key'] == key and cached['sha256'] == checksum:
                 _boundary_decisions([decision], records[i:i + 2])
+                decision = json.loads(redact_text(json.dumps(decision), limit=None))
                 old_decisions[i] = decision
                 if not refresh_suggestions:
                     decisions[i] = decision
@@ -570,8 +628,7 @@ def _resumable_proposals(video_path, detailed_df, batch_segments, cache_dir, pro
             notify(f'Checking boundary {i + 1}/{len(decisions)}' + (' (refresh)' if refresh_suggestions else ''))
             try:
                 if client is None:
-                    client = genai.Client(api_key=api_key, http_options=types.HttpOptions(
-                        timeout=60000, retry_options=types.HttpRetryOptions(attempts=1)))
+                    client = create_client(credential)
                     client = client.__enter__()
                 # Two complete neighboring segments on each side expose the
                 # ongoing objective across batch/cache boundaries. They supply
@@ -584,10 +641,13 @@ def _resumable_proposals(video_path, detailed_df, batch_segments, cache_dir, pro
                         context_end += 1
                 context_records = records[context_start:i] + records[end + 1:context_end + 1]
                 evaluated = _propose_window(client, video_path, records[i:end + 1], types, notify, report,
-                                           context_records=context_records)
+                                           context_records=context_records, model=report['provenance']['model'])
             except Exception as error:
+                info = classify_error(error)
+                report['error_kind'] = info.kind
                 report['error'] = f'HTTP {_status_code(error)}' if _status_code(error) else type(error).__name__
-                notify(f'AI unavailable ({type(error).__name__}); completed suggestions retained. '
+                report['error_message'] = info.message
+                notify(f'{info.message} Completed suggestions retained. '
                        'Unresolved boundaries stay separate for manual review.')
                 break  # Circuit breaker: do not hammer an unavailable service.
             for offset, decision in enumerate(evaluated, i):
@@ -623,7 +683,8 @@ def _resumable_proposals(video_path, detailed_df, batch_segments, cache_dir, pro
         warnings.warn(f"{report['fallback']} boundaries use OLD cached fallback results, not fresh evaluations",
                       RuntimeWarning)
     report['boundary_sources'] = [dict(left_segment_id=records[i]['segment_id'],
-                                       right_segment_id=records[i + 1]['segment_id'], source=source)
+                                       right_segment_id=records[i + 1]['segment_id'], source=source,
+                                       decision=deepcopy(decisions[i]))
                                  for i, source in enumerate(sources)]
     for i, value in enumerate(decisions):
         if value is None:
@@ -632,7 +693,24 @@ def _resumable_proposals(video_path, detailed_df, batch_segments, cache_dir, pro
     notify(f"{report['api_calls']} API calls; {report['fresh']} fresh; {report['cache_hits']} reused "
            f"({report['fallback']} OLD fallbacks); "
            f"{report['unresolved']} unresolved for manual review.")
-    return _protect_proposals(seeds, records, decisions)
+    result = _protect_proposals(seeds, records, decisions)
+    report['warnings'] = list(dict.fromkeys(report['warnings'] + grouping_diagnostics(result, decisions)))
+    for warning in report['warnings']:
+        notify('Review warning: ' + warning)
+    audit_dir = directory / 'runs'
+    try:
+        audit_dir.mkdir(exist_ok=True)
+        audit = dict(provenance=report['provenance'], records=records, groups=result,
+                     proposed_groups=report.get('proposed_groups', []),
+                     boundaries=report['boundary_sources'], warnings=report['warnings'],
+                     statistics={key: report.get(key) for key in ('api_calls', 'fresh', 'cache_hits',
+                         'fallback', 'unresolved', 'error_kind', 'error_message')})
+        # Unique snapshots preserve baselines and include no credential identity.
+        (audit_dir / (uuid.uuid4().hex + '.json')).write_text(
+            redact_text(json.dumps(audit, ensure_ascii=False), limit=None), encoding='utf-8')
+    except OSError:
+        notify('Could not save the AI comparison snapshot; current proposals remain reviewable.')
+    return result
 
 
 def _unresolved_boundary(left, right):
@@ -660,13 +738,30 @@ def load_confirmed_review(path, identity, records):
     return None
 
 
-def save_confirmed_review(path, identity, groups):
+def preserve_outputs(paths, history_directory):
+    """Copy only existing outputs to an immutable run folder before replacement."""
+    import shutil
+    existing = [Path(path) for path in paths if Path(path).is_file()]
+    if not existing:
+        return None
+    destination = Path(history_directory) / uuid.uuid4().hex
+    destination.mkdir(parents=True)
+    for path in existing:
+        shutil.copy2(path, destination / path.name)
+    return destination
+
+
+def save_confirmed_review(path, identity, groups, provenance=None):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='semantic_review_', dir=path.parent) as work:
         temporary = Path(work) / path.name
-        temporary.write_text(json.dumps({'confirmed': True, 'identity': identity, 'groups': groups},
-                                         ensure_ascii=False, indent=2), encoding='utf-8')
+        data = dict(confirmed=True, identity=identity, groups=groups)
+        if provenance is not None:
+            data['provenance'] = provenance
+        temporary.write_text(redact_text(json.dumps(data,
+                                         ensure_ascii=False, indent=2), limit=None), encoding='utf-8')
+        preserve_outputs([path], path.parent / 'semantic_history')
         os.replace(temporary, path)
 
 
@@ -674,27 +769,52 @@ def review_semantic_task_log(video_path, detailed_df, output_dir, base_name,
                              *, offline=False, initial_groups=None, reviewer=None, refresh_suggestions=False):
     """Checkpoint detailed annotations before review; publish only confirmed groups."""
     from toolbox.event_log_creation import TASK_MAPPING, exportCSV, exportXES, extractTaskLog
-    if reviewer is None:
+    using_gui = reviewer is None
+    ui_metadata = {}
+    if using_gui:
         from gui.semantic_review import review_task_groups
         reviewer = review_task_groups
     records = segment_records(detailed_df)
     directory = Path(output_dir)
     directory.mkdir(parents=True, exist_ok=True)
+    run_directory = directory / 'semantic_runs' / uuid.uuid4().hex
+    run_directory.mkdir(parents=True)
+    provenance = aggregation_provenance(records)
+    preserve_outputs([directory / f'{base_name}_detailed_eventlog.csv',
+                      directory / f'{base_name}_detailed_eventlog.xes'], directory / 'semantic_history')
     # These exports reuse the existing functions. Cancel/API failure cannot
     # destroy the original segment-level annotations.
     exportCSV(detailed_df.copy(deep=True), f'{base_name}_detailed', str(directory))
     exportXES(detailed_df.copy(deep=True), f'{base_name}_detailed', str(directory))
+    detailed_df.to_csv(run_directory / 'reviewed_segments.csv', index=False)
+    (run_directory / 'configuration.json').write_text(redact_text(json.dumps(provenance), limit=None), encoding='utf-8')
     identity = _review_identity(video_path, detailed_df)
     review_path = directory / f'{base_name}_semantic_groups.json'
     if initial_groups is None:
         initial_groups = load_confirmed_review(review_path, identity, records)
+    initial_provenance = None
+    if initial_groups is not None and review_path.is_file():
+        try:
+            initial_provenance = json.loads(review_path.read_text(encoding='utf-8')).get('provenance')
+        except (OSError, ValueError, TypeError):
+            pass
     review_options = dict(initial_groups=initial_groups, task_mapping=TASK_MAPPING, offline=offline)
+    if using_gui:
+        review_options['run_metadata'] = ui_metadata
     if refresh_suggestions:
         review_options['refresh_suggestions'] = True
     groups = reviewer(video_path, detailed_df.copy(deep=True), **review_options)
     groups = validate_groups(groups, records)
+    provenance = ui_metadata.get('ai_provenance', provenance)
+    provenance = dict(provenance, ai_suggestions_requested='ai_provenance' in ui_metadata,
+                      api_calls=ui_metadata.get('api_calls', 0))
+    if initial_provenance:
+        provenance['initial_review_provenance'] = {key: value for key, value in initial_provenance.items()
+                                                   if key != 'initial_review_provenance'}
     task_df = extractTaskLog(detailed_df, confirmed_groups=groups)
-    save_confirmed_review(review_path, identity, groups)
+    save_confirmed_review(review_path, identity, groups, provenance)
+    save_confirmed_review(run_directory / 'confirmed_groups.json', identity, groups, provenance)
+    task_df.to_csv(run_directory / 'task_eventlog.csv', index=False)
     return task_df
 
 

@@ -10,16 +10,17 @@ from __future__ import annotations
 
 import math
 import json
+import logging
 import os
+import re
 import tempfile
 import warnings
 from pathlib import Path
 
 import cv2
 import numpy as np
-from dotenv import load_dotenv
-
-load_dotenv(Path(__file__).resolve().parent / ".env")
+from gemini_runtime import (resolve_credential, get_model, create_client,
+    generation_config, generate_with_retry, classify_error, InvalidResponseError, redact_text as _redact_text)
 
 # Keep each inline request reasonably small. Files API is intentionally not
 # required: short clips avoid the prior upload/processing wait.
@@ -29,6 +30,105 @@ _ENCODE_FPS = 6.0
 _GEMINI_SAMPLE_FPS = 3.0
 _MAX_IMAGE_EDGE = 480
 _CONTEXT_SECONDS = 3.0
+_LOGGER = logging.getLogger(__name__)
+
+# This is the existing V3 contract, now declared to generateContent rather than
+# requested only in prose. Application validation remains authoritative.
+_ACTIVITY_SCHEMA = {
+    'type': 'object',
+    'properties': {
+        'label': {'type': 'string', 'description': 'Specific visible target action, 2 to 6 words, at most 100 characters.'},
+        'evidence': {'type': 'string', 'description': 'Directly visible TARGET motion/state change; not a list or object.'},
+        'uncertainty': {'type': 'string', 'enum': ['low', 'medium', 'high']},
+        'target_visible': {'type': 'boolean'},
+        'bow_action': {'type': 'string', 'enum': ['tie_new', 'tighten_existing', 'adjust_existing',
+                                                'not_applicable', 'unclear']},
+    },
+    'required': ['label', 'evidence', 'uncertainty', 'target_visible', 'bow_action'],
+    'additionalProperties': False,
+}
+
+
+def _generation_config(model, types):
+    return generation_config(model, types,
+        dict(temperature=0.1, max_output_tokens=512), _ACTIVITY_SCHEMA)
+
+
+def _safe_value(value, depth=0):
+    """Only JSON-like values; never dump response objects, headers or requests."""
+    if depth > 6:
+        return '[depth limit]'
+    if isinstance(value, dict):
+        return {_redact_text(key, 100): ('[REDACTED]' if re.search(
+            r'(?i)api.?key|private.?key|authorization|token$|secret|password|credential', str(key)) else
+            _safe_value(item, depth + 1)) for key, item in list(value.items())[:50]}
+    if isinstance(value, (list, tuple)):
+        return [_safe_value(item, depth + 1) for item in value[:50]]
+    if value is None or type(value) in (bool, int, float):
+        return value
+    if isinstance(value, str):
+        return _redact_text(value)
+    return f'<{type(value).__name__}>'
+
+
+def _enum_name(value):
+    return getattr(value, 'value', value) if isinstance(value, str) or hasattr(value, 'value') else None
+
+
+def _response_metadata(response):
+    candidates = getattr(response, 'candidates', None) or []
+    feedback = getattr(response, 'prompt_feedback', None)
+    block_reason = _enum_name(getattr(feedback, 'block_reason', None))
+    reasons = [_enum_name(getattr(candidate, 'finish_reason', None)) for candidate in candidates]
+    usage = getattr(response, 'usage_metadata', None)
+    usage_fields = ('prompt_token_count', 'candidates_token_count', 'thoughts_token_count',
+                    'total_token_count', 'cached_content_token_count')
+    token_usage = {name: getattr(usage, name, None) for name in usage_fields}
+    blocked_reasons = {'SAFETY', 'RECITATION', 'BLOCKLIST', 'PROHIBITED_CONTENT', 'SPII', 'IMAGE_SAFETY'}
+    return {
+        'finish_reasons': reasons, 'candidate_count': len(candidates),
+        'finish_messages': [getattr(candidate, 'finish_message', None) for candidate in candidates],
+        'block_reason': block_reason,
+        'blocked': bool(block_reason and block_reason != 'BLOCK_REASON_UNSPECIFIED') or any(
+            reason in blocked_reasons for reason in reasons),
+        'truncated': True if 'MAX_TOKENS' in reasons else (False if 'STOP' in reasons else None),
+        'usage_metadata': token_usage,
+        'http_status': getattr(getattr(response, 'sdk_http_response', None), 'status_code', None),
+        'model_version': getattr(response, 'model_version', None),
+    }
+
+
+class ActivityResponseError(InvalidResponseError):
+    """A rejected response, retaining redacted diagnostics for local inspection."""
+
+    def __init__(self, model, rule, diagnostics):
+        self.rule, self.diagnostics = rule, diagnostics
+        super().__init__(f'{_redact_text(model, 80)}: {rule}. See label_suggester ERROR diagnostics.')
+
+
+def _reject_response(model, rule, response, text=None, parsed=None):
+    json_valid = False
+    if isinstance(text, str) and text.strip():
+        try:
+            parsed = json.loads(text)
+            json_valid = True
+        except json.JSONDecodeError:
+            pass
+    diagnostics = _safe_value(dict(event='invalid_activity_response', model=model, rule=rule,
+        response_text=text, parsed_json=parsed, empty=not bool(text and str(text).strip()),
+        json_valid=json_valid, response_text_type=type(text).__name__,
+        **_response_metadata(response)))
+    _LOGGER.error('Gemini activity response rejected: %s', json.dumps(diagnostics, ensure_ascii=True))
+    raise ActivityResponseError(model, _redact_text(rule, 300), diagnostics) from None
+
+
+def _log_api_error(model, error):
+    diagnostics = _safe_value(dict(event='activity_api_error', model=model,
+        error_type=type(error).__name__, http_code=getattr(error, 'code', None),
+        status=getattr(error, 'status', None), message=str(error),
+        details=getattr(error, 'details', None)))
+    _LOGGER.error('Gemini activity request failed: %s', json.dumps(diagnostics, ensure_ascii=True))
+    return classify_error(error).message
 
 _PROMPT = (
     'Label ONLY the TARGET SEGMENT for video-based process mining. '
@@ -243,30 +343,58 @@ def _sample_frames(video_path: str | Path, start_frame: int, end_frame: int, sam
         cap.release()
 
 
-def _clean_label(response) -> str:
+def _clean_label(response, *, model=None) -> str:
+    model = model or get_model('label')
     try:
-        result = json.loads(response.text or '')
-        if not isinstance(result, dict):
-            raise ValueError('Expected a JSON object')
-        label, evidence = result['label'], result['evidence']
-        uncertainty, visible, bow = result['uncertainty'], result['target_visible'], result['bow_action']
-        if (not isinstance(label, str) or not isinstance(evidence, str)
-                or type(visible) is not bool or uncertainty not in ('low', 'medium', 'high')
-                or bow not in ('tie_new', 'tighten_existing', 'adjust_existing', 'not_applicable', 'unclear')):
-            raise ValueError('Invalid evidence/uncertainty fields')
-    except (ValueError, KeyError, TypeError) as error:
-        raise RuntimeError('Gemini returned an invalid evidence-based activity response') from error
-    if not visible or uncertainty == 'high' or not evidence.strip() or bow == 'unclear':
-        return 'Unclear activity'
-    if label.strip().lower() == 'unclear activity':
+        text = response.text
+    except (ValueError, TypeError, AttributeError) as error:
+        _reject_response(model, f'response.text unavailable ({type(error).__name__})', response)
+    result, parse_error = None, None
+    if isinstance(text, str) and text.strip():
+        try:
+            result = json.loads(text)
+        except json.JSONDecodeError as error:
+            parse_error = f'JSON syntax: {error.msg} at line {error.lineno}, column {error.colno}'
+    metadata = _response_metadata(response)
+    if metadata['blocked']:
+        reason = metadata['block_reason'] or ', '.join(filter(None, metadata['finish_reasons']))
+        _reject_response(model, f'blocked response ({reason}); no label accepted', response, text, result)
+    if metadata['truncated']:
+        _reject_response(model, 'MAX_TOKENS: truncated response; review output/thinking limits', response, text, result)
+    failures = [reason for reason in metadata['finish_reasons']
+                if reason not in (None, 'STOP', 'FINISH_REASON_UNSPECIFIED')]
+    if failures:
+        _reject_response(model, f'non-success finish_reason: {failures[0]}', response, text, result)
+    if not isinstance(text, str) or not text.strip():
+        _reject_response(model, 'empty or non-text response; no JSON activity received', response, text)
+    if parse_error:
+        _reject_response(model, parse_error, response, text)
+    if not isinstance(result, dict):
+        _reject_response(model, 'JSON root must be an object', response, text, result)
+    missing = [field for field in _ACTIVITY_SCHEMA['required'] if field not in result]
+    if missing:
+        _reject_response(model, 'missing fields: ' + ', '.join(missing), response, text, result)
+    for field in ('label', 'evidence'):
+        if not isinstance(result[field], str):
+            _reject_response(model, f'{field} must be a string (got {type(result[field]).__name__})', response, text, result)
+    if type(result['target_visible']) is not bool:
+        _reject_response(model, 'target_visible must be a JSON boolean', response, text, result)
+    for field in ('uncertainty', 'bow_action'):
+        if result[field] not in _ACTIVITY_SCHEMA['properties'][field]['enum']:
+            _reject_response(model, f'{field} must be one of the declared enum values', response, text, result)
+    label = ' '.join(result['label'].split()).strip(' .')
+    if _redact_text(label) != label:
+        _reject_response(model, 'label contains credential-like content; no label accepted', response, text, result)
+    if not 2 <= len(label.split()) <= 6 or len(label) > 100 or not any(char.isalpha() for char in label):
+        _reject_response(model, 'label must be 2-to-6 words, at most 100 characters, with alphabetic text', response, text, result)
+    if (not result['target_visible'] or result['uncertainty'] == 'high'
+            or not result['evidence'].strip() or result['bow_action'] == 'unclear'
+            or label.lower() == 'unclear activity'):
         return 'Unclear activity'
     canonical = {'tie_new': 'Tie ribbon bow', 'tighten_existing': 'Tighten ribbon bow',
                  'adjust_existing': 'Adjust ribbon bow'}
-    if bow in canonical:
-        return canonical[bow]
-    label = ' '.join(label.split()).strip(' .')
-    if not 2 <= len(label.split()) <= 6 or len(label) > 100:
-        raise RuntimeError('Gemini returned an activity label outside the 2-to-6-word limit')
+    if result['bow_action'] in canonical:
+        return canonical[result['bow_action']]
     return label[0].upper() + label[1:].lower()
 
 
@@ -282,9 +410,7 @@ def suggest_activity(
     from Tkinter's event loop. 'Use suggestion' and 'Commit & Next' remain
     manual. This function does not change GUI state or LABEL.
     """
-    api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        raise RuntimeError("Missing GEMINI_API_KEY or GOOGLE_API_KEY environment variable")
+    credential = resolve_credential()
 
     start_frame, end_frame = int(start_frame), int(end_frame)
     if start_frame < 0 or end_frame < start_frame:
@@ -345,12 +471,14 @@ def suggest_activity(
         'not the overall task or process; evidence must support that exact action.')))
     contents = types.Content(parts=parts)
 
-    model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
-    with genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=60000)) as client:
-        response = client.models.generate_content(
-            model=model,
-            contents=contents,
-            config=types.GenerateContentConfig(temperature=0.1, max_output_tokens=512,
-                                               response_mime_type='application/json'),
-        )
-    return _clean_label(response)
+    model = get_model('label')
+    try:
+        with create_client(credential) as client:
+            response = generate_with_retry(client, dict(model=model, contents=contents,
+                config=_generation_config(model, types)))
+    except Exception as error:
+        safe_error = _log_api_error(model, error)
+        # SDK exception strings can echo request credentials. The redacted
+        # diagnostics above retain details; do not print an unsafe cause chain.
+        raise RuntimeError(f'{_redact_text(model, 80)}: API request failed: {safe_error}') from None
+    return _clean_label(response, model=model)

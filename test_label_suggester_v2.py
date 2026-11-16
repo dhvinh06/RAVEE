@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 
 from label_suggester import suggest_activity
+from gemini_runtime import get_model
 
 
 def main():
@@ -23,7 +24,7 @@ def main():
     print("Video:", args.video)
     print("Frame range:", args.start, "-", args.end)
     print("Mode:", args.mode)
-    print("Model:", os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite"))
+    print("Model:", get_model('label'))
     print("Proposed label:", suggest_activity(args.video, args.start, args.end))
 
 

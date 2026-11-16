@@ -116,6 +116,11 @@ def reset_label_gui():
 def export_two_event_logs(detailed_df, task_df, output_dir, base_name):
     """Export detailed and task-level event logs as CSV and XES."""
     os.makedirs(output_dir, exist_ok=True)
+    from toolbox.semantic_aggregation import preserve_outputs
+    preserve_outputs([os.path.join(output_dir, f'{base_name}_{level}_eventlog.{suffix}')
+                      for level in ('detailed', 'task') for suffix in ('csv', 'xes')]
+                     + [os.path.join(output_dir, f'{base_name}_task_eventlog_process_model.{suffix}')
+                        for suffix in ('png', 'svg')], os.path.join(output_dir, 'semantic_history'))
 
     exportCSV(detailed_df, f"{base_name}_detailed", output_dir)
     exportXES(detailed_df, f"{base_name}_detailed", output_dir)

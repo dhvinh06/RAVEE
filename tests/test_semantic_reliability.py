@@ -28,7 +28,10 @@ class RetryTests(unittest.TestCase):
             with self.subTest(code=code), patch.object(s.time, 'sleep') as sleep, \
                  patch.object(s.random, 'uniform', side_effect=lambda low, high: high / 2) as jitter:
                 client = Mock()
-                client.models.generate_content.side_effect = [HttpFailure(code)] * 3 + ['success']
+                failure = HttpFailure(code)
+                if code == 429:
+                    failure.details = {'quotaId': 'RequestsPerMinute'}
+                client.models.generate_content.side_effect = [failure] * 3 + ['success']
                 stats = {'api_calls': 0}
                 self.assertEqual(s._generate_with_retry(client, {}, stats=stats), 'success')
                 self.assertEqual(stats['api_calls'], 4)

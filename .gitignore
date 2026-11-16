@@ -36,6 +36,8 @@ Thumbs.db
 # RAVEE generated data. Ignoring does not delete or untrack existing files.
 /temp/
 /EventLog_Output/
+**/semantic_history/
+**/semantic_runs/
 /finch/input/
 /finch/output/
 /video_input/
