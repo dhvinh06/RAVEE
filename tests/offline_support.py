@@ -10,6 +10,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 _STACK = ExitStack()
 _INSTALLED = False
+TWELVELABS_CLIENT_FACTORY = None
 
 
 def _protected_path(value):
@@ -43,12 +44,13 @@ def _protect_artifacts(event, args):
 
 def install_offline_isolation():
     """Run once when the tests package loads, before application/SDK imports."""
-    global _INSTALLED
+    global _INSTALLED, TWELVELABS_CLIENT_FACTORY
     if _INSTALLED:
         return
     _INSTALLED = True
     environment = {name: value for name, value in os.environ.items()
-                   if not name.startswith(('GEMINI_', 'RAVEE_SUGGEST_')) and
+                   if not name.startswith(('GEMINI_', 'TWELVELABS_', 'TWELVE_LABS_', 'RAVEE_SUGGEST_')) and
+                   name not in ('RAVEE_LABEL_PROVIDER', 'RAVEE_AGGREGATION_PROVIDER') and
                    name not in ('GOOGLE_API_KEY', 'GOOGLE_APPLICATION_CREDENTIALS')}
     environment['GEMINI_API_KEY'] = 'offline-test-default-never-send'
     _STACK.enter_context(patch.dict(os.environ, environment, clear=True))
@@ -61,6 +63,10 @@ def install_offline_isolation():
     _STACK.enter_context(patch.object(gemini_runtime, '_ENV_PATH', ROOT / 'tests' / 'absent-offline.env'))
     _STACK.enter_context(patch.object(gemini_runtime, '_INJECTED', {}))
     _STACK.enter_context(patch.object(gemini_runtime, '_SESSION_CREDENTIAL_NAME', None))
+    import twelvelabs_provider
+    TWELVELABS_CLIENT_FACTORY = twelvelabs_provider.create_client
+    _STACK.enter_context(patch.object(twelvelabs_provider, 'create_client', side_effect=AssertionError(
+        'Real TwelveLabs clients are forbidden in offline tests; mock the client explicitly')))
     sys.addaudithook(_protect_artifacts)
     atexit.register(_STACK.close)
 

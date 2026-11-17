@@ -96,8 +96,14 @@ See [batch behavior and limits](docs/BATCH_LABEL_SUGGESTIONS.md).
 
 ## Offline regression and optional local checks
 
-The `tests` package isolates dotenv discovery and Gemini environment variables,
-uses a fake default credential, blocks unmocked Gemini clients and forbids writes
+Optional Pegasus support uses the official SDK in `requirements-twelvelabs.txt`:
+`python -m pip install -r requirements-twelvelabs.txt`. It is needed only when
+selecting `twelvelabs` through `RAVEE_LABEL_PROVIDER` or
+`RAVEE_AGGREGATION_PROVIDER`; both default to `gemini`. Keep existing Gemini
+settings. See [TwelveLabs configuration, upload consent and limits](docs/TWELVELABS_PROVIDER.md).
+
+The `tests` package isolates dotenv discovery and Gemini/TwelveLabs environment variables,
+uses fake credentials, blocks unmocked provider clients and forbids writes
 to production research/cache directories. All generated test data stays in OS
 temporary directories. The serialization regression uses deterministic synthetic
 current/legacy logs, independent of the latest experiment output.

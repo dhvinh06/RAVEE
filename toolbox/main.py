@@ -382,10 +382,12 @@ def entrypoint(argv=None):
     # Legacy processing flags retain their original directory-processing meaning.
     # --gui can explicitly combine them with the new selector.
     legacy_cli = args.allow_idt or any(options.values())
-    if DEMO or args.no_gui or args.video or args.prepare_only or (legacy_cli and not args.gui):
-        return main(videos=[args.video] if args.video else None,
-                    allow_idt=args.allow_idt, prepare_only=args.prepare_only, **options)
-    return launch_interactive(**options)
+    from gui.lifecycle import gui_application
+    with gui_application():
+        if DEMO or args.no_gui or args.video or args.prepare_only or (legacy_cli and not args.gui):
+            return main(videos=[args.video] if args.video else None,
+                        allow_idt=args.allow_idt, prepare_only=args.prepare_only, **options)
+        return launch_interactive(**options)
 
 
 if __name__ == "__main__":

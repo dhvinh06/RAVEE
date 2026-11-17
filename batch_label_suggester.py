@@ -14,6 +14,7 @@ import tempfile
 from types import SimpleNamespace
 
 import cv2
+from ai_providers import get_provider, create_adapter
 
 from gemini_runtime import (RequestSession, create_client, generate_with_retry,
                             generation_config, get_model, resolve_credential,
@@ -142,13 +143,16 @@ def _video_info(path):
 
 
 def suggest_all_activities(video_path, segments, *, cache_dir=None, on_daily_quota=None,
-                           progress=None, stats=None):
+                           progress=None, stats=None, on_upload=None):
     """Return {segment_id: suggested label}; a warm batch cache makes no API call.
 
     Run on a worker. A cold batch makes one generation request for all segments;
     only shared transient retries or a user-approved quota recovery may replay it.
     Oversized/unsupported media fail without splitting into per-segment requests.
     """
+    if get_provider('label') == 'twelvelabs':
+        return _suggest_pegasus_batch(video_path, segments, cache_dir, on_daily_quota,
+                                      progress, stats, on_upload)
     from google.genai import types
     notify = progress or (lambda message: None)
     report = stats if stats is not None else {}
@@ -225,3 +229,22 @@ def suggest_all_activities(video_path, segments, *, cache_dir=None, on_daily_quo
             except OSError:
                 pass
     return labels
+
+
+def _suggest_pegasus_batch(video_path, segments, cache_dir, on_daily_quota, progress, stats, on_upload):
+    from twelvelabs_provider import video_metadata, timeline, generation_settings
+    records = segment_boundaries(segments)
+    metadata = video_metadata(video_path)
+    manifest = dict(video=metadata, segments=timeline(records, metadata))
+    prompt = _PROMPT + '\n' + json.dumps(manifest)
+    report = stats if stats is not None else {}
+    report.update(api_calls=0, cache_hit=False)
+    root = Path(cache_dir) / 'twelvelabs' if cache_dir is not None else None
+    adapter = create_adapter('label', cache_dir=root, on_daily_quota=on_daily_quota,
+                             on_upload=on_upload, progress=progress, stats=report)
+    try:
+        return adapter.cached_analysis('batch', video_path, prompt, _schema(records),
+            generation_settings(min(65536, max(2048, 256 * len(records) + 1024))),
+            lambda response: _validate_response(response, records, adapter.model)[0], inputs=records)
+    finally:
+        adapter.close()

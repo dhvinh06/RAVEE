@@ -124,6 +124,12 @@ def generation_config(model, types, base, schema=None):
     return types.GenerateContentConfig(**options)
 
 
+def remember_secret(value):
+    """Retain redaction protection when an optional provider's key changes."""
+    if value:
+        _SEEN_SECRETS.add(value)
+
+
 def redact_text(value, limit=8192):
     text = str(value)
     # Include all configured profiles, not just the active one, and credentials
@@ -131,7 +137,7 @@ def redact_text(value, limit=8192):
     config = configuration()
     secrets = set(_SEEN_SECRETS)
     for key, secret in list(config.items()) + list(os.environ.items()):
-        if secret and (key in ('GOOGLE_API_KEY', 'GOOGLE_APPLICATION_CREDENTIALS')
+        if secret and (key in ('GOOGLE_API_KEY', 'GOOGLE_APPLICATION_CREDENTIALS', 'TWELVELABS_API_KEY')
                        or re.fullmatch(r'GEMINI_API_KEY(?:_[A-Za-z0-9_]+)?', key)):
             secrets.add(secret)
     for secret in sorted(secrets, key=len, reverse=True):
@@ -225,6 +231,8 @@ def _daily_request_quota(error):
 
 
 def classify_error(error):
+    if getattr(error, 'provider', None) == 'twelvelabs' and isinstance(getattr(error, 'info', None), ErrorInfo):
+        return error.info
     code = status_code(error)
     if getattr(error, 'kind', None) == 'invalid_response' or type(error).__name__ == 'ActivityResponseError':
         return ErrorInfo('invalid_response', False, 'Invalid model response: schema or evidence validation failed.', code)

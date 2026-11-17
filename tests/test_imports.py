@@ -46,6 +46,7 @@ class ImportTests(unittest.TestCase):
                 'label_suggester', 'batch_label_suggester', 'gui.gui_elements', 'gui.semantic_review',
                 'gui.theme', 'gui.video_selection', 'gui.video_preview', 'gui.quota_recovery', 'gemini_runtime',
                 'toolbox.main', 'integrate_label_suggester', 'make_contact_sheet',
+                'ai_providers', 'twelvelabs_provider', 'gui.ai_upload', 'gui.lifecycle',
             ]
             with patch('socket.socket.connect', forbidden), \\
                  patch('subprocess.Popen', forbidden), \\
@@ -60,7 +61,7 @@ class ImportTests(unittest.TestCase):
         result = subprocess.run([sys.executable, '-B', '-c', script], cwd=ROOT,
                                 capture_output=True, text=True, timeout=60)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn('Imported 28 application/utility module paths', result.stdout)
+        self.assertIn('Imported 32 application/utility module paths', result.stdout)
 
 
 if __name__ == '__main__':

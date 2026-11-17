@@ -41,7 +41,16 @@ class Desktop:
         item.value, item.children, item.chosen, item.index = options.get('value', ''), [], (), -1
         item.winfo_width.return_value, item.winfo_height.return_value = 800, 450
         item.configure.side_effect = lambda **kw: item.options.update(kw)
-        item.bind.side_effect = lambda event, callback: item.bindings.update({event: callback})
+        def bind(event, callback, **kwargs):
+            previous = item.bindings.get(event) if kwargs.get('add') == '+' else None
+            if previous is None:
+                item.bindings[event] = callback
+            else:
+                def combined(value):
+                    previous(value)
+                    callback(value)
+                item.bindings[event] = combined
+        item.bind.side_effect = bind
         item.get.side_effect = lambda *args: item.value
         item.set.side_effect = lambda value: setattr(item, 'value', value)
         item.get_children.side_effect = lambda: tuple(item.children)

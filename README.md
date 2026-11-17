@@ -2,7 +2,8 @@
 
 RAVEE turns videos into reviewed activity segments, semantic tasks and event logs
 for process mining. This working fork adds cached non-demo processing, Gemini
-Label Suggester V3, human-reviewed Semantic Task Aggregation and process-model export.
+Label Suggester V3, optional TwelveLabs Pegasus labeling/aggregation,
+human-reviewed Semantic Task Aggregation and process-model export.
 
 ## Architecture
 
@@ -169,11 +170,16 @@ Graphviz `dot` must be on PATH for image export; logs remain usable if rendering
 
 ## Test without external work
 
+Gemini remains the default. To select Pegasus independently for labeling or task
+aggregation, see [optional TwelveLabs setup, uploads and cache behavior](docs/TWELVELABS_PROVIDER.md).
+Its SDK is an optional dependency in `requirements-twelvelabs.txt`; existing
+Gemini configuration and the `python toolbox/main.py` entry point are unchanged.
+
 ```powershell
 python -B -m unittest discover -s tests -t . -v
 ```
 
-The suite mocks Gemini, Docker, IDT, feature extraction, FINCH and Graphviz execution.
+The suite mocks Gemini, TwelveLabs, Docker, IDT, feature extraction, FINCH and Graphviz execution.
 Regression serialization uses deterministic synthetic logs. Two checks reading
 existing local logs or cached-video metadata require the explicit
 `RAVEE_RUN_LOCAL_INTEGRATION=1` opt-in and are skipped by default. The `tests`

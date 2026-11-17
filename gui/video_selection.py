@@ -8,6 +8,7 @@ from tkinter import filedialog, messagebox, ttk
 
 from gui.theme import COLORS, apply_theme, fit_window, workspace_header
 from toolbox.pipeline_cache import VIDEO_SUFFIXES, discover_videos
+from gui.lifecycle import WindowLifetime, WorkerInbox, new_window
 
 
 class VideoSelectionController:
@@ -20,7 +21,7 @@ class VideoSelectionController:
         self.busy = False
         self.revision = 0
         self.closed = False
-        self.jobs, self.events = Queue(), Queue()
+        self.jobs, self.events = Queue(), WorkerInbox()
         self.worker = Thread(target=self._work, daemon=True, name='ravee-video-preparation')
         self.worker.start()
 
@@ -84,6 +85,7 @@ class VideoSelectionController:
 
     def close(self):
         self.closed = True
+        self.events.close()
         self.jobs.put(None)
 
 
@@ -93,7 +95,8 @@ def select_video_to_process(input_directory, inspect, process):
     Preparation finishes before this root is destroyed. Existing labeling and
     semantic review roots are then opened by main.py on the same main thread.
     """
-    root = tk.Tk()
+    root = new_window()
+    lifetime = WindowLifetime(root)
     apply_theme(root)
     root.title('RAVEE - Select Video to Process')
     fit_window(root, 1120, 760, 900, 620)
@@ -132,9 +135,9 @@ def select_video_to_process(input_directory, inspect, process):
     info = ttk.Frame(body, style='Card.TFrame', padding=16)
     info.grid(row=2, column=0, sticky='ew', pady=(12, 0))
     info.columnconfigure(0, weight=1)
-    selected_text = tk.StringVar(value='Select one video from the list, or browse for a video.')
-    cache_text = tk.StringVar(value='Cache status: select a video')
-    stage_text = tk.StringVar(value='')
+    selected_text = lifetime.variable(tk.StringVar, value='Select one video from the list, or browse for a video.')
+    cache_text = lifetime.variable(tk.StringVar, value='Cache status: select a video')
+    stage_text = lifetime.variable(tk.StringVar, value='')
     ttk.Label(info, textvariable=selected_text, style='Section.TLabel', wraplength=820).grid(row=0, column=0, sticky='w')
     ttk.Label(info, textvariable=cache_text, style='Card.TLabel').grid(row=1, column=0, sticky='w', pady=(8, 4))
     ttk.Label(info, textvariable=stage_text, style='CardMuted.TLabel', wraplength=820).grid(row=2, column=0, sticky='w')
@@ -144,7 +147,7 @@ def select_video_to_process(input_directory, inspect, process):
     footer.columnconfigure(0, weight=1)
     progress = ttk.Progressbar(footer, mode='indeterminate')
     progress.grid(row=0, column=0, columnspan=2, sticky='ew', pady=(0, 12))
-    status = tk.StringVar(value='Process Video authorizes missing preprocessing and Docker IDT extraction for your selected video.')
+    status = lifetime.variable(tk.StringVar, value='Process Video authorizes missing preprocessing and Docker IDT extraction for your selected video.')
     status_label = ttk.Label(footer, textvariable=status, style='Muted.TLabel', wraplength=650)
     status_label.grid(row=1, column=0, sticky='w', padx=(0, 16))
     process_button = ttk.Button(footer, text='Process Video', style='Primary.TButton', state='disabled')
@@ -234,6 +237,8 @@ def select_video_to_process(input_directory, inspect, process):
 
     def poll():
         nonlocal result, polling
+        if lifetime.closed:
+            return
         for kind, payload in controller.poll():
             if kind == 'cache':
                 cache_text.set('Cache status: ' + payload['status'])
@@ -253,15 +258,15 @@ def select_video_to_process(input_directory, inspect, process):
                 controller.select(controller.selected)
             elif kind == 'success':
                 result = payload
-                root.quit()
+                lifetime.request_close()
                 return
-        polling = root.after(100, poll)
+        polling = lifetime.after(100, poll)
 
     def close():
         if controller.busy:
             status.set('Processing is running. Wait for it to finish; completed stages are saved automatically.')
             return
-        root.quit()
+        lifetime.request_close()
 
     browse_button.configure(command=browse)
     refresh_button.configure(command=refresh)
@@ -270,12 +275,13 @@ def select_video_to_process(input_directory, inspect, process):
     root.protocol('WM_DELETE_WINDOW', close)
     try:
         refresh()
-        polling = root.after(100, poll)
+        polling = lifetime.after(100, poll)
         root.mainloop()
     finally:
+        lifetime.close()
         controller.close()
         progress.stop()
         if polling is not None:
-            root.after_cancel(polling)
-        root.destroy()
+            lifetime.cancel(polling)
+        lifetime.destroy()
     return result

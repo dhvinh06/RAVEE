@@ -10,7 +10,10 @@ from PIL import Image, ImageTk
 from gui.theme import COLORS, apply_theme, fit_window, style_text, workspace_header
 from gui.video_preview import resize_preview_image
 from gui.quota_recovery import QuotaRecovery
-from gemini_runtime import get_model, redact_text
+from gemini_runtime import redact_text
+from ai_providers import provider_status
+from gui.ai_upload import UploadConsent
+from gui.lifecycle import WindowLifetime, WorkerInbox, AIJob, run_ai_job, new_window
 
 from toolbox.semantic_aggregation import GroupEditor, ReviewCancelled, segment_records, propose_task_groups
 
@@ -20,7 +23,8 @@ def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_map
     records = segment_records(detailed_df)
     editor = GroupEditor(records, initial_groups, task_mapping)
     by_id = {row['segment_id']: row for row in records}
-    root = tk.Tk()
+    root = new_window()
+    lifetime = WindowLifetime(root)
     apply_theme(root)
     root.title('RAVEE - Semantic Task Aggregation')
     fit_window(root, 1400, 960, 1020, 700)
@@ -29,7 +33,7 @@ def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_map
     header = workspace_header(root, 'Review task groups',
         'Group adjacent actions by their objective. Review each task before confirming.',
         '02  /  Semantic tasks')
-    group_count = tk.StringVar()
+    group_count = lifetime.variable(tk.StringVar)
     ttk.Label(header, textvariable=group_count, style='Muted.TLabel').grid(row=1, column=1, sticky='e')
     body = ttk.Frame(root, padding=(24, 0, 24, 12))
     body.grid(row=1, column=0, sticky='nsew')
@@ -107,7 +111,10 @@ def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_map
     footer = ttk.Frame(root, padding=(24, 0, 24, 16))
     footer.grid(row=3, column=0, sticky='ew')
     footer.columnconfigure(0, weight=1)
-    status = tk.StringVar(value='Review groups manually, or request Gemini suggestions.')
+    status = lifetime.variable(tk.StringVar, value='Review groups manually, or request AI suggestions.')
+    ai_status = ttk.Label(footer, text=provider_status('aggregation'), style='Muted.TLabel')
+    ai_status.grid(row=2, column=0, columnspan=2, sticky='w')
+    upload_consent = UploadConsent(root, timers=lifetime)
     status_label = ttk.Label(footer, textvariable=status, style='Muted.TLabel', wraplength=950)
     status_label.grid(row=0, column=0, columnspan=2, sticky='ew', pady=(0, 12))
     footer.bind('<Configure>', lambda event: status_label.configure(wraplength=max(200, event.width - 48)))
@@ -126,7 +133,7 @@ def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_map
     if offline:
         suggest_button.configure(state='disabled')
         refresh_button.configure(state='disabled')
-        status.set('Offline review: Gemini is disabled. Edit, merge and split groups, then confirm.')
+        status.set('Offline review: AI requests are disabled. Edit, merge and split groups, then confirm.')
 
     cap = cv2.VideoCapture(str(video_path))
     fps = cap.get(cv2.CAP_PROP_FPS) if cap.isOpened() else 0
@@ -135,7 +142,7 @@ def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_map
     preview_image = None
     resize_timer = None
     restore_timer = None
-    queue = Queue()
+    queue = WorkerInbox()
     pending = False
     boundary_sources = []
     if refresh_suggestions and not offline:
@@ -148,27 +155,32 @@ def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_map
     def stop():
         nonlocal playback
         if playback is not None:
-            root.after_cancel(playback)
+            lifetime.cancel(playback)
             playback = None
-        play_button.configure(text='Play selected task')
+        if not lifetime.destroyed:
+            play_button.configure(text='Play selected task')
 
     def resize_preview(_event=None):
         nonlocal resize_timer
+        if lifetime.closed:
+            return
         if resize_timer is not None:
-            root.after_cancel(resize_timer)
+            lifetime.cancel(resize_timer)
             resize_timer = None
         if preview_image is None:
             return
         image = resize_preview_image(preview_image, preview.winfo_width(), preview.winfo_height())
-        photo = ImageTk.PhotoImage(image)
+        photo = lifetime.image(ImageTk.PhotoImage(image, master=root))
         preview.configure(image=photo, text='')
         preview.image = photo
 
     def request_resize(_event=None):
         nonlocal resize_timer
+        if lifetime.closed:
+            return
         if resize_timer is not None:
-            root.after_cancel(resize_timer)
-        resize_timer = root.after(40, resize_preview)
+            lifetime.cancel(resize_timer)
+        resize_timer = lifetime.after(40, resize_preview)
 
     def paint(frame, number):
         nonlocal preview_image
@@ -252,6 +264,8 @@ def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_map
 
     def play_next(end):
         nonlocal playback
+        if lifetime.closed:
+            return
         number = int(cap.get(cv2.CAP_PROP_POS_FRAMES))
         ok, frame = cap.read() if number <= end else (False, None)
         if not ok:
@@ -259,7 +273,7 @@ def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_map
             play_button.configure(text='Play selected task')
             return
         paint(frame, number)
-        playback = root.after(delay, lambda: play_next(end))
+        playback = lifetime.after(delay, lambda: play_next(end))
 
     def play():
         if playback is not None:
@@ -291,7 +305,7 @@ def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_map
     request_inflight = False
     recovered_proposals = None
     request_interruptions = 0
-    recovery = QuotaRecovery(root, on_pause=paused, on_resume=lambda: lock(True),
+    recovery = QuotaRecovery(root, timers=lifetime, on_pause=paused, on_resume=lambda: lock(True),
         on_decision=lambda action: status.set({
             'manual': 'Further AI requests disabled for this review. Continue editing manually.',
             'cancel': 'Pending AI request cancelled. Current review is preserved.',
@@ -342,11 +356,11 @@ def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_map
                     reason.delete('1.0', 'end')
                     reason.insert('1.0', explanation)
             if restore_timer is not None:
-                root.after_cancel(restore_timer)
+                lifetime.cancel(restore_timer)
             restore_form()
             # Tk queues <<TreeviewSelect>>; restore after that event too, so
             # selection notifications cannot discard the restored pending text.
-            restore_timer = root.after_idle(restore_form)
+            restore_timer = lifetime.after_idle(restore_form)
 
     def record_metadata(detail):
         if run_metadata is not None:
@@ -355,16 +369,16 @@ def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_map
 
     def suggest(force_refresh=False):
         nonlocal refresh_suggestions, request_inflight, request_interruptions
-        if offline or pending or request_inflight or recovery.disabled:
+        if lifetime.closed or offline or pending or request_inflight or recovery.disabled:
             return
         if recovered_proposals is not None and not force_refresh:
             load_recovered()
             return
         refresh_requested = force_refresh or refresh_suggestions
-        if not messagebox.askyesno('Gemini task proposals',
+        if not messagebox.askyesno(provider_status('aggregation') + ' task proposals',
                 ('Re-evaluate all boundaries, bypassing this case\'s AI boundary cache? '
                  'Valid old results will be labeled as fallbacks if refresh fails. ' if refresh_requested else '') +
-                'Send existing labels, timestamps and sampled video context to the configured Gemini model? '
+                'Send existing labels, timestamps and video context to ' + provider_status('aggregation') + '? '
                 'API charges may apply. Your current edits will be replaced by proposals; Undo can restore them.',
                 parent=root):
             return
@@ -372,21 +386,21 @@ def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_map
         request_inflight = True
         request_interruptions = recovery.interruptions
         lock(True)
-        status.set(f'{redact_text(get_model("aggregation"), 80)} is proposing adjacent task groups. Review and confirm intermediate objectives.')
+        ai_status.configure(text=provider_status('aggregation'))
+        status.set(provider_status('aggregation') + ' is proposing adjacent task groups. Review and confirm intermediate objectives.')
 
-        def worker():
-            try:
-                summary = {}
-                groups = propose_task_groups(video_path, detailed_df.copy(deep=True),
-                    progress=lambda message: queue.put(('progress', message, None)), stats=summary,
-                    refresh_suggestions=refresh_requested, on_daily_quota=recovery.handle_quota)
-                queue.put(('result', groups, summary))
-            except Exception as error:
-                queue.put(('error', None, str(error)))
-        Thread(target=worker, daemon=True).start()
+        # Freeze all request inputs/options on the UI thread. The thread target
+        # is module-level and receives no widget, Variable or UI controller.
+        job = AIJob(propose_task_groups, (video_path, detailed_df.copy(deep=True)),
+                    dict(refresh_suggestions=refresh_requested,
+                         on_daily_quota=recovery.handle_quota, on_upload=upload_consent.authorize),
+                    'result', 'error', progress_tag='progress', with_stats=True)
+        Thread(target=run_ai_job, args=(job, queue), daemon=True).start()
 
     def poll():
         nonlocal polling, boundary_sources, request_inflight, recovered_proposals
+        if lifetime.closed:
+            return
         try:
             while True:
                 kind, payload, detail = queue.get_nowait()
@@ -398,10 +412,11 @@ def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_map
                 if kind == 'error':
                     status.set('AI unavailable; current groups preserved. Manual review still works. ' + redact_text(detail, 220))
                 else:
-                    if detail.get('error_kind') == 'daily_quota':
+                    if detail.get('error_kind') in ('daily_quota', 'provider_quota'):
                         # Even partial proposals must not replace human review
                         # after Cancel/manual. Fresh results remain cached.
-                        status.set('Daily quota request stopped; current review preserved. ' +
+                        quota_name = 'Daily' if detail.get('error_kind') == 'daily_quota' else 'TwelveLabs'
+                        status.set(quota_name + ' quota request stopped; current review preserved. ' +
                                    ('Further AI requests disabled.' if recovery.disabled else
                                     'A later explicit request can reuse completed cached work.'))
                         continue
@@ -428,7 +443,7 @@ def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_map
                         status.set(status.get() + ' Review warning: ' + ' '.join(detail['warnings']))
         except Empty:
             pass
-        polling = root.after(150, poll)
+        polling = lifetime.after(150, poll)
 
     def confirm():
         nonlocal result
@@ -445,11 +460,11 @@ def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_map
                 f'Use these {len(groups)} reviewed activities for the task-level log and process model? '
                 'The detailed log remains unchanged.', parent=root):
             result = groups
-            root.quit()
+            lifetime.request_close()
 
     def cancel():
         if messagebox.askyesno('Cancel review', 'Cancel task review? Detailed segment annotations are already saved.', parent=root):
-            root.quit()
+            lifetime.request_close()
 
     tree.bind('<<TreeviewSelect>>', show_selection)
     preview.bind('<Configure>', request_resize)
@@ -471,19 +486,22 @@ def review_task_groups(video_path, detailed_df, *, initial_groups=None, task_map
         panes.sash_place(0, round(panes.winfo_width() * 0.40), 0)
         root.update_idletasks()
         refresh()
-        polling = root.after(150, poll)
+        polling = lifetime.after(150, poll)
         root.mainloop()
     finally:
+        lifetime.close()
+        queue.close()
         recovery.close()
+        upload_consent.close()
         stop()
         if resize_timer is not None:
-            root.after_cancel(resize_timer)
+            lifetime.cancel(resize_timer)
         if restore_timer is not None:
-            root.after_cancel(restore_timer)
+            lifetime.cancel(restore_timer)
         if polling is not None:
-            root.after_cancel(polling)
+            lifetime.cancel(polling)
         cap.release()
-        root.destroy()
+        lifetime.destroy()
     if result is None:
         raise ReviewCancelled('Task review cancelled. Detailed annotations are saved; no new task groups were confirmed.')
     return result

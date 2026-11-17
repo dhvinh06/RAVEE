@@ -19,6 +19,7 @@ import numpy as np
 import pandas as pd
 
 from toolbox import pipeline_cache as p
+from toolbox.fv_profiling import measure
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -323,7 +324,7 @@ def orchestration_namespace(relative, **dependencies):
 
 class OrchestrationTests(unittest.TestCase):
     def test_raw_reader_uses_named_fields_and_numpy_scalar_frame_numbers(self):
-        ns = orchestration_namespace('toolbox/feature_extraction.py', Path=Path)
+        ns = orchestration_namespace('toolbox/feature_extraction.py', Path=Path, measure=measure)
         # A different field order is legitimate; positional indexing is unsafe.
         raw = tracks()
         raw['hog'] = 1

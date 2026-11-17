@@ -70,7 +70,7 @@ class SemanticPreviewWorkflowTests(unittest.TestCase):
             item.value, item.children, item.chosen = '', [], ()
             item.winfo_width.return_value, item.winfo_height.return_value = 800, 450
             item.configure.side_effect = lambda **kwargs: item.options.update(kwargs)
-            item.bind.side_effect = lambda event, callback: item.bindings.update({event: callback})
+            item.bind.side_effect = lambda event, callback, **kwargs: item.bindings.update({event: callback})
             item.get.side_effect = lambda *args: item.value
             item.set.side_effect = lambda value: setattr(item, 'value', value)
             item.get_children.side_effect = lambda: tuple(item.children)
@@ -166,7 +166,7 @@ class SemanticPreviewWorkflowTests(unittest.TestCase):
                 stack.enter_context(patch.object(semantic_review, name))
             stack.enter_context(patch.object(semantic_review.cv2, 'VideoCapture', return_value=cap))
             stack.enter_context(patch.object(semantic_review.ImageTk, 'PhotoImage',
-                side_effect=lambda image: SimpleNamespace(size=image.size)))
+                side_effect=lambda image, **kwargs: SimpleNamespace(size=image.size)))
             stack.enter_context(patch.object(semantic_review.messagebox, 'askyesno', return_value=True))
             warning = stack.enter_context(patch.object(semantic_review.messagebox, 'showwarning'))
             client = stack.enter_context(patch.object(genai, 'Client'))
@@ -263,7 +263,7 @@ class ReviewedLabelTests(unittest.TestCase):
                         and node.name == 'commit_and_next')
         namespace = dict(vars(gui_elements), LABEL={1: 'Broad process label', 2: 'Inspect part'},
             drafts={0: 'Rotate copper cylinder', 1: 'Inspect part'}, current_index=1,
-            segments=[{}, {}], label_entry=Mock(), root=Mock(), messagebox=Mock(),
+            segments=[{}, {}], label_entry=Mock(), root=Mock(), lifetime=Mock(), messagebox=Mock(),
             update_progress_and_tree=Mock(), go_to_segment=Mock())
         namespace['label_entry'].get.return_value = 'Inspect part'
         exec(compile(ast.Module(body=[callback], type_ignores=[]), '<actual GUI callback>', 'exec'), namespace)
@@ -273,7 +273,8 @@ class ReviewedLabelTests(unittest.TestCase):
         self.assertEqual(namespace['LABEL'][1], 'Broad process label')
         namespace['LABEL'][1] = namespace['drafts'][0]  # explicit earlier Commit
         namespace['commit_and_next']()
-        namespace['root'].destroy.assert_called_once()
+        namespace['lifetime'].request_close.assert_called_once()
+        namespace['root'].destroy.assert_not_called()  # Finally owns destruction.
 
     def test_earlier_edited_draft_is_still_pending_when_last_segment_is_saved(self):
         committed = {1: 'Broad old activity', 2: 'Inspect part', 3: 'Put down tool'}

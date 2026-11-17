@@ -6,16 +6,19 @@ in one Tkinter window with an embedded OpenCV video preview.
 
 import tkinter as tk
 from tkinter import ttk, messagebox
-from queue import Queue, Empty
+from queue import Empty
 from threading import Thread
 from label_suggester import suggest_activity  # RAVEE_LABEL_SUGGESTER_INTEGRATED
 from batch_label_suggester import suggest_all_activities
 from gemini_runtime import redact_text
+from ai_providers import provider_status
+from gui.ai_upload import UploadConsent
 
 import cv2
 from PIL import Image, ImageTk
 from gui.theme import COLORS, apply_theme, fit_window, style_text, workspace_header
 from gui.quota_recovery import QuotaRecovery
+from gui.lifecycle import WindowLifetime, WorkerInbox, AIJob, run_ai_job, new_window
 
 
 # Different cluster numbers offered by FINCH
@@ -38,7 +41,8 @@ def uncommitted_segments(labels, drafts, count):
 
 def popupmsg(msg, title):
     """Show a simple modal information window."""
-    root = tk.Tk()
+    root = new_window()
+    lifetime = WindowLifetime(root)
     apply_theme(root)
     root.title(title)
     root.resizable(False, False)
@@ -46,21 +50,25 @@ def popupmsg(msg, title):
 
     label = ttk.Label(root, text=msg, padding=16, wraplength=420)
     label.pack(fill="x")
-    button = ttk.Button(root, text="OK", command=root.destroy)
+    button = ttk.Button(root, text="OK", command=lifetime.request_close)
     button.pack(pady=(0, 12))
 
     root.update_idletasks()
     x = (root.winfo_screenwidth() - root.winfo_width()) // 2
     y = (root.winfo_screenheight() - root.winfo_height()) // 2
     root.geometry(f"+{x}+{y}")
-    root.mainloop()
+    try:
+        root.mainloop()
+    finally:
+        lifetime.destroy()
 
 
 def inputboxList():
     """Let the user choose one of the available cluster granularities."""
     global NUM_CLUSTER
 
-    root = tk.Tk()
+    root = new_window()
+    lifetime = WindowLifetime(root)
     apply_theme(root)
     root.title("RAVEE - Select granularity")
     root.resizable(False, False)
@@ -76,7 +84,7 @@ def inputboxList():
         text="Select the number of clusters to inspect:",
     ).pack(anchor="w", pady=(0, 8))
 
-    display = tk.StringVar(root, value=str(OPTIONS[0]))
+    display = lifetime.variable(tk.StringVar, value=str(OPTIONS[0]))
 
     dropdown = ttk.OptionMenu(
         frame,
@@ -93,7 +101,7 @@ def inputboxList():
 
         print("Selected cluster count:", NUM_CLUSTER)
 
-        root.destroy()
+        lifetime.request_close()
 
     ttk.Button(
         frame,
@@ -108,7 +116,10 @@ def inputboxList():
     y = (root.winfo_screenheight() - root.winfo_height()) // 2
 
     root.geometry(f"+{x}+{y}")
-    root.mainloop()
+    try:
+        root.mainloop()
+    finally:
+        lifetime.destroy()
 
 def setOptions(options):
     """Set the cluster-count options displayed in inputboxList."""
@@ -122,7 +133,8 @@ def inputboxLine():
     """Legacy single-label dialog, retained for compatibility."""
     global LABEL, counter
 
-    root = tk.Tk()
+    root = new_window()
+    lifetime = WindowLifetime(root)
     apply_theme(root)
     root.title("RAVEE - Activity label")
     root.resizable(False, False)
@@ -147,8 +159,11 @@ def inputboxLine():
     buttons = ttk.Frame(frame)
     buttons.pack(fill="x")
     ttk.Button(buttons, text="Commit", style="Primary.TButton", command=commit).pack(side="left", expand=True, fill="x")
-    ttk.Button(buttons, text="Exit", command=root.destroy).pack(side="left", expand=True, fill="x", padx=(8, 0))
-    root.mainloop()
+    ttk.Button(buttons, text="Exit", command=lifetime.request_close).pack(side="left", expand=True, fill="x", padx=(8, 0))
+    try:
+        root.mainloop()
+    finally:
+        lifetime.destroy()
 
 
 def label_video_clusters(video_path, segments):
@@ -183,7 +198,8 @@ def label_video_clusters(video_path, segments):
     LABEL.clear()
     counter = 1
 
-    root = tk.Tk()
+    root = new_window()
+    lifetime = WindowLifetime(root)
     apply_theme(root)
     root.title("RAVEE - Segment Activity Labeling")
     fit_window(root, 1240, 820, 980, 640)
@@ -193,7 +209,7 @@ def label_video_clusters(video_path, segments):
 
     header = workspace_header(root, "Label video segments",
         "Preview each segment, name the activity, then save your label.", "01  /  Segment labels")
-    progress_text = tk.StringVar(value=f"0 / {len(segments)} labeled")
+    progress_text = lifetime.variable(tk.StringVar, value=f"0 / {len(segments)} labeled")
     ttk.Label(header, textvariable=progress_text, style="Muted.TLabel").grid(row=1, column=1, sticky="e")
 
     body = ttk.Frame(root, padding=(24, 0, 24, 16))
@@ -221,7 +237,7 @@ def label_video_clusters(video_path, segments):
     )
     video_label.grid(row=1, column=0, sticky="nsew")
 
-    video_status = tk.StringVar(value="Frame: -")
+    video_status = lifetime.variable(tk.StringVar, value="Frame: -")
     ttk.Label(video_panel, textvariable=video_status, style="CardMuted.TLabel").grid(row=2, column=0, sticky="w", pady=(8, 2))
 
     playback_controls = ttk.Frame(video_panel, style="Card.TFrame")
@@ -234,8 +250,8 @@ def label_video_clusters(video_path, segments):
     side.grid(row=0, column=1, sticky="nsew")
     side.columnconfigure(0, weight=1)
 
-    cluster_title = tk.StringVar()
-    cluster_range = tk.StringVar()
+    cluster_title = lifetime.variable(tk.StringVar)
+    cluster_range = lifetime.variable(tk.StringVar)
     ttk.Label(side, text="Current segment", style="Section.TLabel").grid(row=0, column=0, sticky="w")
     ttk.Label(side, textvariable=cluster_title, style="Card.TLabel", font=("Segoe UI", 16, "bold")).grid(row=1, column=0, sticky="w", pady=(4, 0))
     ttk.Label(side, textvariable=cluster_range, style="CardMuted.TLabel").grid(row=2, column=0, sticky="w", pady=(0, 12))
@@ -246,7 +262,7 @@ def label_video_clusters(video_path, segments):
     label_entry = ttk.Entry(side)
     label_entry.grid(row=4, column=0, sticky="new", pady=(5, 8))
 
-    label_status = tk.StringVar(value="Not saved")
+    label_status = lifetime.variable(tk.StringVar, value="Not saved")
     ttk.Label(side, textvariable=label_status, style="CardMuted.TLabel").grid(row=5, column=0, sticky="w", pady=(0, 8))
 
     action_button = ttk.Button(side, text="Commit & Next", style="Primary.TButton")
@@ -293,11 +309,14 @@ def label_video_clusters(video_path, segments):
     tree.configure(yscrollcommand=tree_scroll.set)
     tree_scroll.grid(row=9, column=1, sticky="ns")
 
-    suggestion_text = tk.StringVar(value="Click Suggest label for an AI suggestion.")
+    suggestion_text = lifetime.variable(tk.StringVar, value="Click Suggest label for an AI suggestion.")
     suggestion_status = ttk.Label(side, textvariable=suggestion_text,
                                   style="CardMuted.TLabel", wraplength=340)
     suggestion_status.grid(row=10, column=0, sticky="w", pady=(6, 0))
-    batch_text = tk.StringVar(value="Suggest All proposes labels for every segment in one request.")
+    batch_text = lifetime.variable(tk.StringVar, value="Suggest All proposes labels for every segment in one request.")
+    ai_status = ttk.Label(side, text=provider_status('label'), style='CardMuted.TLabel', wraplength=340)
+    ai_status.grid(row=11, column=0, sticky='w', pady=(4, 0))
+    upload_consent = UploadConsent(root, timers=lifetime)
 
     footer = ttk.Frame(root, padding=(24, 0, 24, 16))
     footer.grid(row=2, column=0, sticky="ew")
@@ -312,8 +331,23 @@ def label_video_clusters(video_path, segments):
     suggestions = {}  # segment index -> proposed text (not committed)
     batch_suggestions = {}  # Separate from individual V3; never written to LABEL.
     batch_pending = False
-    suggestion_queue = Queue()
+    suggestion_queue = WorkerInbox()
     pending_suggestion = None
+    ai_scope = provider_status('label')
+    suggestion_scopes = {ai_scope: (suggestions, batch_suggestions)}
+
+    def sync_ai_scope():
+        nonlocal ai_scope, suggestions, batch_suggestions
+        # A pending worker finishes into its original proposal dictionaries.
+        # Switching provider/model never clears drafts or committed labels.
+        if lifetime.closed or pending_suggestion is not None or batch_pending:
+            return
+        selected = provider_status('label')
+        if selected != ai_scope:
+            ai_scope = selected
+            suggestions, batch_suggestions = suggestion_scopes.setdefault(ai_scope, ({}, {}))
+            update_progress_and_tree()
+        ai_status.configure(text=ai_scope)
     preview_image = None
 
     def segment_at(index):
@@ -357,7 +391,7 @@ def label_video_clusters(video_path, segments):
         max_width = max(video_label.winfo_width(), 1)
         max_height = max(video_label.winfo_height(), 1)
         image.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
-        photo = ImageTk.PhotoImage(image=image)
+        photo = lifetime.image(ImageTk.PhotoImage(image=image, master=root))
         video_label.configure(image=photo, text="")
         video_label.image = photo
 
@@ -371,16 +405,10 @@ def label_video_clusters(video_path, segments):
         nonlocal playing, after_id
         playing = False
         if after_id is not None:
-            try:
-                root.after_cancel(after_id)
-            except tk.TclError:
-                pass
+            lifetime.cancel(after_id)
             after_id = None
-        try:
+        if not lifetime.destroyed:
             play_button.configure(text="Play")
-        except tk.TclError:
-            # The window may already have been destroyed when mainloop exits.
-            pass
 
     def show_segment_first_frame():
         nonlocal current_frame, preview_image
@@ -400,7 +428,7 @@ def label_video_clusters(video_path, segments):
 
     def play_next_frame():
         nonlocal after_id, current_frame, playing
-        if not playing:
+        if lifetime.closed or not playing:
             return
 
         seg = segment_at(current_index)
@@ -416,7 +444,7 @@ def label_video_clusters(video_path, segments):
 
         current_frame = next_frame_number
         render_frame(frame, current_frame)
-        after_id = root.after(playback_delay, play_next_frame)
+        after_id = lifetime.after(playback_delay, play_next_frame)
 
     def toggle_playback():
         nonlocal playing
@@ -436,6 +464,7 @@ def label_video_clusters(video_path, segments):
         drafts[current_index] = label_entry.get().strip()
 
     def update_suggestion_ui():
+        sync_ai_scope()
         busy = pending_suggestion is not None or batch_pending
         suggest_all_button.configure(state="disabled" if busy or recovery.disabled else "normal")
         use_batch_button.configure(state="normal" if current_index in batch_suggestions else "disabled")
@@ -464,8 +493,9 @@ def label_video_clusters(video_path, segments):
 
     def request_suggestion():
         nonlocal pending_suggestion
-        if pending_suggestion is not None or batch_pending:
+        if lifetime.closed or pending_suggestion is not None or batch_pending:
             return
+        sync_ai_scope()
         index = current_index
         if index in suggestions:
             # The user explicitly chooses to put the suggestion in the entry;
@@ -485,22 +515,17 @@ def label_video_clusters(video_path, segments):
         update_suggestion_ui()
         segment = segment_at(index)
 
-        def worker():
-            try:
-                label = suggest_activity(
-                    video_path, segment["start_frame"], segment["end_frame"],
-                    on_daily_quota=recovery.handle_quota,
-                )
-                suggestion_queue.put((index, label, None))
-            except Exception as exc:
-                suggestion_queue.put((index, None, str(exc)))
-
-        Thread(target=worker, daemon=True).start()
+        job = AIJob(suggest_activity,
+                    (video_path, int(segment["start_frame"]), int(segment["end_frame"])),
+                    dict(on_daily_quota=recovery.handle_quota, on_upload=upload_consent.authorize),
+                    index, index)
+        Thread(target=run_ai_job, args=(job, suggestion_queue), daemon=True).start()
 
     def request_all_suggestions():
         nonlocal batch_pending
-        if batch_pending or pending_suggestion is not None or recovery.disabled:
+        if lifetime.closed or batch_pending or pending_suggestion is not None or recovery.disabled:
             return
+        sync_ai_scope()
         save_current_draft()
         batch_pending = True
         update_suggestion_ui()
@@ -509,17 +534,14 @@ def label_video_clusters(video_path, segments):
         boundaries = [dict(segment_id=i + 1, start_frame=int(segment['start_frame']),
                            end_frame=int(segment['end_frame'])) for i, segment in enumerate(segments)]
 
-        def worker():
-            try:
-                labels = suggest_all_activities(video_path, boundaries,
-                    on_daily_quota=recovery.handle_quota,
-                    progress=lambda message: suggestion_queue.put(('batch_progress', message, None)))
-                suggestion_queue.put(('batch', labels, None))
-            except Exception as error:
-                suggestion_queue.put(('batch', None, redact_text(error, 300)))
-        Thread(target=worker, daemon=True).start()
+        job = AIJob(suggest_all_activities, (video_path, boundaries),
+                    dict(on_daily_quota=recovery.handle_quota, on_upload=upload_consent.authorize),
+                    'batch', 'batch', progress_tag='batch_progress')
+        Thread(target=run_ai_job, args=(job, suggestion_queue), daemon=True).start()
 
     def use_batch_suggestion():
+        sync_ai_scope()
+        update_suggestion_ui()
         if current_index not in batch_suggestions:
             return
         label_entry.delete(0, 'end')
@@ -532,6 +554,8 @@ def label_video_clusters(video_path, segments):
 
     def poll_suggestions():
         nonlocal pending_suggestion, batch_pending
+        if lifetime.closed:
+            return
         try:
             while True:
                 index, label, error = suggestion_queue.get_nowait()
@@ -539,6 +563,7 @@ def label_video_clusters(video_path, segments):
                     batch_text.set(label)
                     continue
                 if index == 'batch':
+                    completed_scope = ai_scope
                     batch_pending = False
                     if label is not None:
                         batch_suggestions.update({identifier - 1: value for identifier, value in label.items()})
@@ -548,6 +573,9 @@ def label_video_clusters(video_path, segments):
                     batch_text.set('Suggest All unavailable; your labels and drafts are preserved. ' + error
                                    if error else f'{len(batch_suggestions)} batch suggestions ready. '
                                    'Select a segment and use its batch suggestion when ready; nothing was committed.')
+                    if completed_scope != ai_scope:
+                        batch_text.set('Completed suggestions retained for ' + completed_scope +
+                                       '. Request suggestions for the newly selected provider/model.')
                     continue
                 pending_suggestion = None
                 if label:
@@ -559,7 +587,7 @@ def label_video_clusters(video_path, segments):
                     )
         except Empty:
             pass
-        root.after(150, poll_suggestions)
+        lifetime.after(150, poll_suggestions)
 
     def go_to_segment(index):
         nonlocal current_index
@@ -622,7 +650,7 @@ def label_video_clusters(video_path, segments):
             f"All {len(segments)} video segments have been labeled.",
             parent=root,
         )
-        root.destroy()
+        lifetime.request_close()
 
     def go_previous():
         if current_index > 0:
@@ -674,13 +702,13 @@ def label_video_clusters(video_path, segments):
                 parent=root,
             )
             return
-        root.destroy()
+        lifetime.request_close()
 
     def show_quota_status(message):
         (batch_text if batch_pending else suggestion_text).set(message)
 
-    recovery = QuotaRecovery(root,
-        on_pause=lambda: show_quota_status('Daily quota exhausted. Request paused; manual labeling is available.'),
+    recovery = QuotaRecovery(root, timers=lifetime,
+        on_pause=lambda: show_quota_status('AI provider quota exhausted. Request paused; manual labeling is available.'),
         on_decision=lambda action: show_quota_status({
             'manual': 'Further AI requests disabled. Continue labeling manually.',
             'cancel': 'Pending AI request cancelled. Your labels and drafts are preserved.',
@@ -712,13 +740,17 @@ def label_video_clusters(video_path, segments):
 
     root.update_idletasks()
     go_to_segment(0)
-    root.after(150, poll_suggestions)
+    lifetime.after(150, poll_suggestions)
     try:
         root.mainloop()
     finally:
+        lifetime.close()
+        suggestion_queue.close()
         recovery.close()
+        upload_consent.close()
         stop_playback()
         cap.release()
+        lifetime.destroy()
 
     # The existing main.py expects a label for every segment.
     missing = [i + 1 for i in uncommitted_segments(LABEL, drafts, len(segments))]

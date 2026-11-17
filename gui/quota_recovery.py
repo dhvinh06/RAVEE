@@ -3,18 +3,18 @@
 The controller owns no annotation/review state. Cancel/manual leave the
 pending API operation unsuccessful; completed results remain in their cache.
 """
-from threading import Event, Lock
 import tkinter as tk
 from tkinter import ttk
 
 from gemini_runtime import configured_credentials, select_credential
 from gui.theme import apply_theme
+from gui.lifecycle import AfterCallbacks, DecisionChannel
 
 
 class QuotaRecovery:
     _visible = None  # At most one quota dialog across review windows.
 
-    def __init__(self, root, *, on_pause=None, on_resume=None, on_decision=None):
+    def __init__(self, root, *, on_pause=None, on_resume=None, on_decision=None, timers=None):
         self.root = root
         self.on_pause = on_pause or (lambda: None)
         self.on_resume = on_resume or (lambda: None)
@@ -24,40 +24,49 @@ class QuotaRecovery:
         self.interruptions = 0
         self.last_action = None
         self.dialog = None
-        self._pending = None
-        self._lock = Lock()
-        self._timer = root.after(100, self._poll)
+        self.channel = DecisionChannel()
+        self.timers = timers if timers is not None else AfterCallbacks(root)
+        self._owns_timers = timers is None
+        self._timer = self.timers.after(100, self._poll)
+        root.bind('<Destroy>', self._owner_destroyed, add='+')
+
+    def _owner_destroyed(self, event):
+        if event.widget is self.root:
+            self.close()
+
+    def _dialog_destroyed(self, event):
+        if event.widget is self.dialog:
+            self.dialog = None
+            if QuotaRecovery._visible is self:
+                QuotaRecovery._visible = None
 
     @property
     def waiting(self):
-        with self._lock:
-            return self._pending is not None
+        return self.channel.peek() is not None
 
-    def handle_quota(self, credential):
-        """Worker callback: no Tk calls, no automatic retries or key rotation."""
-        with self._lock:
-            if self.closed or self.disabled or self._pending is not None:
-                return None
-            request = {'event': Event(), 'credential': credential, 'replacement': None}
-            self._pending = request
-        request['event'].wait()
-        with self._lock:
-            return None if self.closed else request['replacement']
+    @property
+    def handle_quota(self):
+        # The returned bound method owns ONLY the pure-Python channel. A worker
+        # must not keep this UI controller/root alive while releasing its result.
+        return self.channel.request
 
     def _poll(self):
         self._timer = None
         if self.closed:
             return
-        with self._lock:
-            pending = self._pending
+        pending = self.channel.peek()
         if pending is not None and self.dialog is None and QuotaRecovery._visible is None:
             self.interruptions += 1
             self.on_pause()
-            self._show(pending['credential'])
-        self._timer = self.root.after(100, self._poll)
+            self._show(pending['payload'])
+        if not self.closed:
+            self._timer = self.timers.after(100, self._poll)
 
     def _show(self, current):
+        if current.name == 'TWELVELABS_API_KEY':
+            return self._show_twelvelabs()
         dialog = self.dialog = tk.Toplevel(self.root)
+        dialog.bind('<Destroy>', self._dialog_destroyed, add='+')
         QuotaRecovery._visible = self
         dialog.title('Gemini daily quota exhausted')
         dialog.transient(self.root)
@@ -106,19 +115,36 @@ class QuotaRecovery:
         dialog.protocol('WM_DELETE_WINDOW', lambda: self.decide('cancel'))
         # Intentionally no grab_set, wait_window, nested mainloop or UI-thread I/O.
 
+    def _show_twelvelabs(self):
+        dialog = self.dialog = tk.Toplevel(self.root)
+        dialog.bind('<Destroy>', self._dialog_destroyed, add='+')
+        QuotaRecovery._visible = self
+        dialog.title('TwelveLabs quota exhausted')
+        dialog.transient(self.root)
+        apply_theme(dialog)
+        content = ttk.Frame(dialog, padding=20)
+        content.pack(fill='both', expand=True)
+        ttk.Label(content, text='TwelveLabs plan allowance or credits exhausted',
+                  wraplength=520).pack(anchor='w')
+        ttk.Label(content, text='Labels, pending edits and completed suggestions are preserved. '
+                  'Review your TwelveLabs plan before retrying. No credential or provider will be switched. '
+                  'Gemini credentials do not apply to TwelveLabs.', wraplength=520).pack(anchor='w', pady=12)
+        ttk.Button(content, text='Continue manually', command=lambda: self.decide('manual')).pack(side='left')
+        ttk.Button(content, text='Select credential', state='disabled').pack(side='left', padx=8)
+        ttk.Button(content, text='Cancel', command=lambda: self.decide('cancel')).pack(side='left')
+        dialog.protocol('WM_DELETE_WINDOW', lambda: self.decide('cancel'))
+
     def decide(self, action, replacement=None):
         """UI-thread decision. A selection must come from the explicit chooser."""
         if action not in ('manual', 'cancel', 'select'):
             raise ValueError('Unknown quota recovery action')
         if action == 'select' and replacement is None:
             raise ValueError('Credential selection is required')
-        with self._lock:
-            request = self._pending
-            if request is None:
-                return
-            self._pending = None
-            request['replacement'] = replacement if action == 'select' else None
+        request = self.channel.take()
+        if request is None:
+            return
         self.disabled = self.disabled or action == 'manual'
+        self.channel.disabled = self.disabled
         self.last_action = action
         try:
             self._dismiss()
@@ -128,28 +154,23 @@ class QuotaRecovery:
         finally:
             # Even a destroyed widget/error in a UI notification must not leave
             # a worker permanently waiting after its request has been detached.
-            request['event'].set()
+            self.channel.resolve(request, replacement if action == 'select' else None)
 
     def _dismiss(self):
         if self.dialog is not None:
-            try:
-                self.dialog.destroy()
-            except tk.TclError:
-                pass  # Parent may already have destroyed its child windows.
+            self.dialog.destroy()
             self.dialog = None
         if QuotaRecovery._visible is self:
             QuotaRecovery._visible = None
 
     def close(self):
         self.closed = True
+        self.channel.close()  # Release waiting workers before tearing down Tk.
         if self._timer is not None:
-            try:
-                self.root.after_cancel(self._timer)
-            except tk.TclError:
-                pass
+            self.timers.cancel(self._timer)
             self._timer = None
-        with self._lock:
-            request, self._pending = self._pending, None
         self._dismiss()
-        if request is not None:
-            request['event'].set()
+        self.on_pause = self.on_resume = self.on_decision = None
+        self.root = None
+        if self._owns_timers:
+            self.timers.close()

@@ -21,6 +21,7 @@ from email.utils import parsedate_to_datetime
 
 import cv2
 import pandas as pd
+from ai_providers import get_provider, get_model as provider_model, create_adapter
 from gemini_runtime import (resolve_credential, get_model, create_client, generation_config,
     generate_with_retry as _generate_with_retry, status_code as _status_code,
     retry_after as _retry_after, classify_error, InvalidResponseError, RequestSession, redact_text)
@@ -482,9 +483,17 @@ def _aggregation_config(model, types):
 
 
 def aggregation_provenance(records, batch_segments=12):
+    if get_provider('aggregation') == 'twelvelabs':
+        from twelvelabs_provider import generation_settings
+        return dict(provider='twelvelabs', model=provider_model('aggregation'),
+            label_provider=get_provider('label'), label_model=provider_model('label'),
+            generation=generation_settings(), response_schema=_AGGREGATION_SCHEMA,
+            prompt_sha256=hashlib.sha256(_PROMPT.encode()).hexdigest(),
+            reviewed_segments_sha256=hashlib.sha256(json.dumps(records, sort_keys=True).encode()).hexdigest(),
+            batch_segments=batch_segments, mode='full_video_asset', context_seconds='full-video')
     from google.genai import types
     model = get_model('aggregation')
-    return dict(model=model, label_model=get_model('label'),
+    return dict(model=model, label_model=provider_model('label'),
         generation=_aggregation_config(model, types).model_dump(mode='json', exclude_none=True),
         prompt_sha256=hashlib.sha256(_PROMPT.encode()).hexdigest(),
         reviewed_segments_sha256=hashlib.sha256(json.dumps(records, sort_keys=True).encode()).hexdigest(),
@@ -512,15 +521,24 @@ def grouping_diagnostics(groups, decisions):
 
 def _propose_window(client, video_path, records, types, progress=None, stats=None, context_records=None, model=None):
     model = model or get_model('aggregation')
-    response = _generate_with_retry(client, dict(
-        model=model,
-        contents=types.Content(parts=[types.Part(text=_PROMPT),
-                                     types.Part(text=json.dumps({'segments': records,
-                                         'context_segments': list(context_records or []),
-                                         'context_usage': 'Context only: never output these IDs in groups or boundaries'}))]
-                               + _media_parts(video_path, records, types, context_records)),
-        config=_aggregation_config(model, types),
-    ), progress, stats)
+    if getattr(client, 'provider', None) == 'twelvelabs':
+        from twelvelabs_provider import video_metadata, timeline, generation_settings
+        metadata = video_metadata(video_path)
+        manifest = dict(segments=timeline(records, metadata),
+            context_segments=timeline(context_records, metadata) if context_records else [],
+            video=metadata, context_usage='Context only: never output these IDs in groups or boundaries')
+        response = client.analyze(video_path, _PROMPT + '\n' + json.dumps(manifest),
+                                  _AGGREGATION_SCHEMA, generation_settings())
+    else:
+        response = _generate_with_retry(client, dict(
+            model=model,
+            contents=types.Content(parts=[types.Part(text=_PROMPT),
+                                         types.Part(text=json.dumps({'segments': records,
+                                             'context_segments': list(context_records or []),
+                                             'context_usage': 'Context only: never output these IDs in groups or boundaries'}))]
+                                   + _media_parts(video_path, records, types, context_records)),
+            config=_aggregation_config(model, types),
+        ), progress, stats)
     try:
         reasons = [getattr(getattr(candidate, 'finish_reason', None), 'value',
                            getattr(candidate, 'finish_reason', None))
@@ -546,11 +564,11 @@ def _propose_window(client, video_path, records, types, progress=None, stats=Non
 
 
 def propose_task_groups(video_path, detailed_df, batch_segments=12, *, cache_dir=None, progress=None, stats=None,
-                        refresh_suggestions=False, on_daily_quota=None):
+                        refresh_suggestions=False, on_daily_quota=None, on_upload=None):
     # One worker/request stream across review windows, including retry waits.
     with _REQUEST_LOCK:
         return _resumable_proposals(video_path, detailed_df, batch_segments, cache_dir, progress, stats,
-                                    refresh_suggestions, on_daily_quota)
+                                    refresh_suggestions, on_daily_quota, on_upload)
 
 
 def _video_identity(video_path):
@@ -573,11 +591,14 @@ def _boundary_cache_key(identity, records, index, batch_segments, provenance=Non
                'context': os.getenv('RAVEE_SUGGEST_CONTEXT_SECONDS', str(v3._CONTEXT_SECONDS)),
                'implementation': _BOUNDARY_IMPLEMENTATION_SIGNATURE,
                'encoder': v3.AGGREGATION_ENCODER_SIGNATURE}
+    if provenance.get('provider') == 'twelvelabs':
+        payload.update(provider='twelvelabs', mode='full_video_asset', context='full-video',
+                       encoder='pegasus-full-asset-v1', response_schema=_AGGREGATION_SCHEMA)
     return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
 
 
 def _resumable_proposals(video_path, detailed_df, batch_segments, cache_dir, progress, stats, refresh_suggestions,
-                        on_daily_quota=None):
+                        on_daily_quota=None, on_upload=None):
     """Explicit opt-in API operation; never called on import or by cache lookup."""
     import label_suggester  # retain existing .env loading, without changing V3
     from google import genai
@@ -586,7 +607,8 @@ def _resumable_proposals(video_path, detailed_df, batch_segments, cache_dir, pro
     records = segment_records(detailed_df)
     if type(batch_segments) is not int or not 2 <= batch_segments <= 24:
         raise ValueError('batch_segments must be an integer between 2 and 24')
-    credential = resolve_credential()
+    pegasus = get_provider('aggregation') == 'twelvelabs'
+    credential = None if pegasus else resolve_credential()
     report = stats if stats is not None else {}
     report.update(provenance=aggregation_provenance(records, batch_segments), warnings=[],
                   api_calls=0, cache_hits=0, fresh=0, fallback=0, unresolved=0,
@@ -594,6 +616,9 @@ def _resumable_proposals(video_path, detailed_df, batch_segments, cache_dir, pro
     if len(records) == 1:
         return singleton_groups(records)
     directory = Path(cache_dir) if cache_dir is not None else Path(__file__).resolve().parent.parent / 'temp/semantic_boundary_cache'
+    if pegasus:
+        directory = (directory / 'twelvelabs' if cache_dir is not None else
+                     Path(__file__).resolve().parent.parent / 'temp/twelvelabs/semantic_boundaries')
     directory.mkdir(parents=True, exist_ok=True)
     identity = dict(_video_identity(video_path), case=str(detailed_df['videoID'].iloc[0]))
     report['provenance']['video'] = identity
@@ -608,6 +633,9 @@ def _resumable_proposals(video_path, detailed_df, batch_segments, cache_dir, pro
             decision = cached['decision']
             checksum = hashlib.sha256(json.dumps(decision, sort_keys=True).encode()).hexdigest()
             if cached['complete'] is True and cached['key'] == key and cached['sha256'] == checksum:
+                if pegasus:
+                    from twelvelabs_provider import _validate_json
+                    _validate_json(decision, _AGGREGATION_SCHEMA['properties']['boundaries']['items'])
                 _boundary_decisions([decision], records[i:i + 2])
                 decision = json.loads(redact_text(json.dumps(decision), limit=None))
                 old_decisions[i] = decision
@@ -615,7 +643,7 @@ def _resumable_proposals(video_path, detailed_df, batch_segments, cache_dir, pro
                     decisions[i] = decision
                     sources[i] = 'reused'
                     report['cache_hits'] += 1
-        except (OSError, ValueError, KeyError, TypeError):
+        except (OSError, ValueError, KeyError, TypeError, InvalidResponseError):
             pass
     # Nonadjacent records need no model evaluation and must remain separated.
     for i in range(len(decisions)):
@@ -634,8 +662,13 @@ def _resumable_proposals(video_path, detailed_df, batch_segments, cache_dir, pro
             notify(f'Checking boundary {i + 1}/{len(decisions)}' + (' (refresh)' if refresh_suggestions else ''))
             try:
                 if client is None:
-                    client = RequestSession(credential, on_daily_quota, factory=create_client)
-                    client = client.__enter__()
+                    if pegasus:
+                        client = create_adapter('aggregation', on_daily_quota=on_daily_quota,
+                            on_upload=on_upload, progress=notify, stats=report,
+                            cache_dir=directory if cache_dir is not None else None)
+                    else:
+                        client = RequestSession(credential, on_daily_quota, factory=create_client)
+                        client = client.__enter__()
                 # Two complete neighboring segments on each side expose the
                 # ongoing objective across batch/cache boundaries. They supply
                 # context only, without more requests or re-evaluating cache hits.
@@ -675,7 +708,7 @@ def _resumable_proposals(video_path, detailed_df, batch_segments, cache_dir, pro
             try:
                 client.close()
             except Exception:
-                notify('Gemini client cleanup failed; completed suggestions retained.')
+                notify('AI client cleanup failed; completed suggestions retained.')
     if refresh_suggestions:
         for i, value in enumerate(decisions):
             if value is None and old_decisions[i] is not None:

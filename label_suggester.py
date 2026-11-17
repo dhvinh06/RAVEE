@@ -19,6 +19,7 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+from ai_providers import get_provider, create_adapter
 from gemini_runtime import (resolve_credential, get_model, create_client,
     generation_config, generate_with_retry, classify_error, InvalidResponseError,
     RequestSession, redact_text as _redact_text)
@@ -408,7 +409,7 @@ def suggest_activity(
     start_frame: int,
     end_frame: int,
     sample_count: int = 6,
-    *, on_daily_quota=None,
+    *, on_daily_quota=None, on_upload=None, cache_dir=None, progress=None,
 ) -> str:
     """Return an unverified suggested activity label for [start_frame,end_frame].
 
@@ -416,6 +417,9 @@ def suggest_activity(
     from Tkinter's event loop. 'Use suggestion' and 'Commit & Next' remain
     manual. This function does not change GUI state or LABEL.
     """
+    if get_provider('label') == 'twelvelabs':
+        return _suggest_pegasus(video_path, start_frame, end_frame, sample_count,
+                               on_daily_quota, on_upload, cache_dir, progress)
     credential = resolve_credential()
 
     start_frame, end_frame = int(start_frame), int(end_frame)
@@ -488,3 +492,38 @@ def suggest_activity(
         # diagnostics above retain details; do not print an unsafe cause chain.
         raise RuntimeError(f'{_redact_text(model, 80)}: API request failed: {safe_error}') from None
     return _clean_label(response, model=model)
+
+
+def _suggest_pegasus(video_path, start_frame, end_frame, sample_count,
+                     on_daily_quota, on_upload, cache_dir, progress):
+    from batch_label_suggester import segment_boundaries
+    from twelvelabs_provider import video_metadata, timeline, generation_settings
+    records = segment_boundaries([dict(start_frame=int(start_frame), end_frame=int(end_frame))])
+    if sample_count < 1:
+        raise ValueError('sample_count must be at least 1')
+    metadata = video_metadata(video_path)
+    target = timeline(records, metadata)[0]
+    context = float(os.getenv('RAVEE_SUGGEST_CONTEXT_SECONDS', str(_CONTEXT_SECONDS)))
+    if not math.isfinite(context) or context < 0:
+        raise ValueError('Suggestion context seconds must be finite and nonnegative')
+    # The API window must span >=1s. Padding is context only; target is unchanged.
+    start = max(0., target['start_seconds'] - context)
+    end = min(metadata['duration'], target['end_seconds_exclusive'] + context)
+    end = min(metadata['duration'], max(end, start + 1.))
+    start = max(0., min(start, end - 1.))
+    prompt = _PROMPT + '\n' + json.dumps(dict(target_segment=target,
+        analysis_window_seconds=[start, end], video=metadata,
+        context_usage='Frames before/after the exact target are context only. Label ONLY target_segment.'))
+    root = Path(cache_dir) / 'twelvelabs' if cache_dir is not None else None
+    adapter = create_adapter('label', cache_dir=root, on_daily_quota=on_daily_quota,
+                             on_upload=on_upload, progress=progress)
+    try:
+        origin = metadata.get('start_time')
+        window = (start + origin, end + origin) if origin is not None else None
+        if window is None and progress is not None:
+            progress('Video time origin unverified; analyzing full asset with exact target frame timestamps.')
+        return adapter.cached_analysis('individual', video_path, prompt, _ACTIVITY_SCHEMA,
+            generation_settings(1024), lambda response: _clean_label(response, model=adapter.model),
+            window=window, inputs=target)
+    finally:
+        adapter.close()

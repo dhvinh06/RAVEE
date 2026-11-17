@@ -7,6 +7,7 @@ Only raw IDT trajectories can feed extract_framewise_features and temporal FINCH
 import csv
 import hashlib
 import importlib.metadata
+import inspect
 import json
 import math
 import os
@@ -15,10 +16,11 @@ import shutil
 import subprocess
 import tempfile
 from zipfile import BadZipFile
-from fractions import Fraction
 
 import cv2
 import numpy as np
+
+from toolbox.fv_profiling import FVProfile, measure
 
 
 VIDEO_SUFFIXES = {'.avi', '.mp4', '.mov', '.mkv', '.wmv', '.webm', '.m4v',
@@ -94,12 +96,15 @@ def video_info(path, decode=False):
     cap = cv2.VideoCapture(str(path))
     try:
         if not cap.isOpened():
-            raise ValueError(f'Cannot open video: {path}')
+            raise ValueError(f'Cannot open video: {path}; readable video expected=True, '
+                             f'actual=False; path_length={len(str(path))}')
         info = {name: cap.get(prop) for name, prop in (
             ('frames', cv2.CAP_PROP_FRAME_COUNT), ('fps', cv2.CAP_PROP_FPS),
             ('width', cv2.CAP_PROP_FRAME_WIDTH), ('height', cv2.CAP_PROP_FRAME_HEIGHT))}
-        if not all(math.isfinite(v) and v > 0 for v in info.values()):
-            raise ValueError(f'Invalid video metadata: {path}')
+        invalid = [f'{name}: expected finite > 0, actual={value}'
+                   for name, value in info.items() if not math.isfinite(value) or value <= 0]
+        if invalid:
+            raise ValueError(f'Invalid video metadata: {path}; ' + '; '.join(invalid))
         if decode:
             count = 0
             while True:
@@ -108,7 +113,8 @@ def video_info(path, decode=False):
                     break
                 count += 1
             if count != int(info['frames']):
-                raise ValueError(f'Incomplete video: {path}: {count}/{info["frames"]} frames')
+                raise ValueError(f'Incomplete video: {path}; decoded frame_count '
+                                 f'expected={int(info["frames"])} from metadata, actual={count}')
         return info
     finally:
         cap.release()
@@ -120,16 +126,31 @@ def validate_preprocessed(path, source, settings):
     fps, width, height = settings
     expected = int(source['frames'])
     if source['fps'] > fps:
-        # Match reduce_video_size's existing keep/drop algorithm exactly.
-        ratio = Fraction(source['fps'] / (source['fps'] - fps)).limit_denominator(10000)
-        keep, drop = ratio.numerator, ratio.denominator
+        # Match ggT()/kuerzen() and the integer counters in the existing reducer.
+        # A rational approximation changes that finite-video schedule: at
+        # 30000/1001 FPS the reducer's float GCD is tiny, so a short input can
+        # remain entirely inside its first keep run. Do not silently resample or
+        # change that legacy contract in a cache validator.
+        dividend, divisor = source['fps'], source['fps'] - fps
+        while dividend % divisor != 0:
+            dividend, divisor = divisor, dividend % divisor
+        keep = math.ceil(source['fps'] / divisor)
+        drop = math.ceil((source['fps'] - fps) / divisor)
         cycles, tail = divmod(expected, keep + drop)
         expected = cycles * keep + min(tail, keep)
     resize = source['width'] > width and source['height'] > height
     dimensions = (width, height) if resize else (source['width'], source['height'])
-    if (abs(info['frames'] - expected) > 2 or abs(info['fps'] - fps) > 0.01
-            or (info['width'], info['height']) != dimensions):
-        raise ValueError(f'Preprocessing result does not match input/settings: {path}')
+    mismatches = []
+    if abs(info['frames'] - expected) > 2:
+        mismatches.append(f'frame_count expected={expected} (+/- 2), actual={info["frames"]:g}')
+    if abs(info['fps'] - fps) > 0.01:
+        mismatches.append(f'fps expected={fps:g} (+/- 0.01), actual={info["fps"]:.12g}')
+    if (info['width'], info['height']) != dimensions:
+        mismatches.append(f'resolution expected={dimensions[0]:g}x{dimensions[1]:g}, '
+                          f'actual={info["width"]:g}x{info["height"]:g}')
+    if mismatches:
+        raise ValueError(f'Preprocessing result does not match input/settings: {path}; '
+                         + '; '.join(mismatches))
 
 
 def validate_tracks(path, frame_count):
@@ -251,23 +272,30 @@ class StageCache:
             os.replace(pending, manifest)
             return destination
 
-    def arrays(self, stage, inputs, producer, validator):
+    def arrays(self, stage, inputs, producer, validator, *, profile=None):
         def produce(path):
             arrays = producer()
             validator(arrays)
-            with path.open('wb') as stream:
-                np.savez(stream, **arrays)
+            with measure(profile, 'cache_serialization'):
+                with path.open('wb') as stream:
+                    np.savez(stream, **arrays)
 
         def read(path):
-            with np.load(path, allow_pickle=False) as archive:
-                arrays = {key: archive[key] for key in archive.files}
+            with measure(profile, 'cache_array_loading'):
+                with np.load(path, allow_pickle=False) as archive:
+                    arrays = {key: archive[key] for key in archive.files}
             validator(arrays)
             return arrays
 
-        hit = self.lookup(stage, inputs, 'arrays.npz')
+        with measure(profile, 'cache_lookup'):
+            hit = self.lookup(stage, inputs, 'arrays.npz')
+        if profile is not None:
+            profile.metadata['cache_hit'] = False
         if hit is not None:
             try:
                 result = read(hit)
+                if profile is not None:
+                    profile.metadata['cache_hit'] = True
                 print(f'Cache hit: {stage}')
                 return result
             except (OSError, ValueError, KeyError, EOFError, BadZipFile):
@@ -423,7 +451,7 @@ def inspect_video_cache(project, cache_directory, source, settings, required=Non
 def prepare_features(project, cache_directory, reduce_video_size, settings,
                      extract_framewise_features, *, allow_idt=False,
                      adopt_preprocessing=False, adopt_idt=False, rebuild=False,
-                     videos=None, progress=None):
+                     videos=None, progress=None, fv_profile=False):
     """Return exact per-input mappings and framewise FVs, without touching labels."""
     project = Path(project)
     cache = StageCache(cache_directory)
@@ -497,16 +525,43 @@ def prepare_features(project, cache_directory, reduce_video_size, settings,
                          lambda path: validate_tracks(path, frame_count))
         report(f'IDT trajectories ready: {source.name}')
         fv_inputs = fv_inputs_for(project, raw)
+        profile = FVProfile() if (fv_profile or os.environ.get('RAVEE_PROFILE_FV') == '1') else None
+        if profile is not None:
+            profile.metadata['video'] = source.name
+            profile.metadata['versions'] = fv_inputs['versions']
 
         def fisher_vectors():
             report(f'Computing Fisher Vectors: {source.name}')
+            # Older standalone/injected extractors keep their two-argument API.
+            # Inspect supported keywords rather than retrying on TypeError,
+            # which could hide a real extraction failure and run work twice.
+            try:
+                parameters = inspect.signature(extract_framewise_features).parameters
+            except (TypeError, ValueError):
+                parameters = {}
+            options = {}
+            if 'progress' in parameters and progress is not None:
+                options['progress'] = lambda message: report(f'{message}: {source.name}')
+            if 'profile' in parameters:
+                options['profile'] = profile
             with tempfile.TemporaryDirectory(prefix='fv-work-', dir=cache.root) as work:
-                return {'features': extract_framewise_features(str(raw), work)}
+                with measure(profile, 'extraction_total'):
+                    return {'features': extract_framewise_features(str(raw), work, **options)}
 
         expected_rows = framewise_rows(raw)
+        if profile is not None:
+            profile.metadata['expected_frame_count'] = expected_rows
         report(f'Verifying Fisher Vector cache: {source.name}')
-        features = cache.arrays('fisher_vectors', fv_inputs, fisher_vectors,
-                                lambda data: validate_fv(data, expected_rows))['features']
+        try:
+            with measure(profile, 'cache_stage_total'):
+                features = cache.arrays('fisher_vectors', fv_inputs, fisher_vectors,
+                                       lambda data: validate_fv(data, expected_rows),
+                                       profile=profile)['features']
+            if profile is not None:
+                profile.matrix('features', features)
+        finally:
+            if profile is not None:
+                print('FV profile: ' + json.dumps(profile.as_dict(), sort_keys=True))
         key = f'{case_id}-{source.stem}'
         report(f'Fisher Vectors ready: {source.name}')
         results[key] = feature_case(source, case_id, prepared, features, fv_inputs)
