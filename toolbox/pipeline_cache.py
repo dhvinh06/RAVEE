@@ -205,7 +205,7 @@ def validate_finch(arrays, rows, required):
 
 
 class StageCache:
-    """A cache hit requires a final manifest, exact inputs and artifact checksum.
+    """A cache hit requires a final manifest, matching inputs and artifact checksum.
 
     Producers run in private directories. Publish the artifact first, then replace
     the completion manifest atomically; exceptions never mark a stage complete.
@@ -235,6 +235,39 @@ class StageCache:
                 hit = self._verified_file(old_manifest.parent / filename, old_manifest, inputs)
                 if hit is not None:
                     return hit
+        return None
+
+    def lookup_preprocessing(self, project, inputs):
+        """Reuse verified preprocessing for a video under a relocated project root."""
+        hit = self.lookup('preprocessing', inputs, inputs['name'])
+        if hit is not None:
+            return hit
+
+        source = Path(inputs['source'])
+        if source.parent != project.resolve() / 'video_input':
+            return None
+        _, _, expected_suffix = inputs['name'].partition('_')
+        for manifest in sorted((self.root / 'preprocessing').glob('*/complete.json')):
+            try:
+                record = json.loads(manifest.read_text(encoding='utf-8'))
+                if record['complete'] is not True:
+                    continue
+                previous = record['inputs']
+                old_source = Path(previous['source'])
+                old_name = previous['name']
+                if not isinstance(old_name, str):
+                    continue
+                old_id, _, suffix = old_name.partition('_')
+                if (not old_source.is_absolute() or old_source == source
+                        or old_source.parent.name != 'video_input' or old_source.name != source.name
+                        or not old_id.isdecimal() or suffix != expected_suffix
+                        or previous != dict(inputs, source=str(old_source), name=old_name)):
+                    continue
+                artifact = manifest.parent / old_name
+                if record['sha256'] == digest_file(artifact):
+                    return artifact
+            except (OSError, ValueError, KeyError, TypeError):
+                continue
         return None
 
     @staticmethod
@@ -419,7 +452,7 @@ def inspect_video_cache(project, cache_directory, source, settings, required=Non
     error = None
     try:
         pre = preprocessing_inputs(project, source, case_id, settings)
-        prepared = cache.lookup('preprocessing', pre, pre['name'])
+        prepared = cache.lookup_preprocessing(project, pre)
         if prepared is not None:
             validate_preprocessed(prepared, video_info(source), settings)
             stages['preprocessing'] = True
@@ -480,19 +513,26 @@ def prepare_features(project, cache_directory, reduce_video_size, settings,
                 report(f'Preprocessing video: {source.name}')
                 reduce_video_size(str(source), str(destination.parent), case_id, source.stem)
 
-        # Resuming without a valid preprocessing cache must be explicit as well.
-        if (not allow_idt and not adopt_preprocessing
-                and cache.lookup('preprocessing', pre_inputs, name) is None):
-            channels = [channel.upper() for channel, rows in tables.items()
-                        if Path(name).stem in rows]
-            raise CacheMiss(
-                f'No verified preprocessing cache for {source.name}. '
-                'Use --adopt-existing-preprocessing to validate IDT/data, '
-                'or --allow-idt to permit preprocessing and missing extraction. '
-                f'Existing global CSV channels: {channels or "none"}; '
-                'global descriptors cannot replace framewise trajectories.')
-        prepared = cache.file('preprocessing', pre_inputs, name, preprocess,
-                              lambda path: validate_preprocessed(path, source_metadata, settings))
+        prepared = cache.lookup_preprocessing(project, pre_inputs)
+        if prepared is not None:
+            try:
+                validate_preprocessed(prepared, source_metadata, settings)
+            except (OSError, ValueError, KeyError, TypeError, EOFError, BadZipFile):
+                prepared = None
+        if prepared is None:
+            if not allow_idt and not adopt_preprocessing:
+                channels = [channel.upper() for channel, rows in tables.items()
+                            if Path(name).stem in rows]
+                raise CacheMiss(
+                    f'No verified preprocessing cache for {source.name}. '
+                    'Use --adopt-existing-preprocessing to validate IDT/data, '
+                    'or --allow-idt to permit preprocessing and missing extraction. '
+                    f'Existing global CSV channels: {channels or "none"}; '
+                    'global descriptors cannot replace framewise trajectories.')
+            prepared = cache.file('preprocessing', pre_inputs, name, preprocess,
+                                  lambda path: validate_preprocessed(path, source_metadata, settings))
+        else:
+            print(f'Cache hit: preprocessing: {prepared.name}')
         report(f'Preprocessing ready: {source.name}')
         frame_count = int(video_info(prepared)['frames'])
         idt_inputs = idt_inputs_for(prepared, source_hash, signature)

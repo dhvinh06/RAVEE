@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 import runpy
+import shutil
 import sys
 import tempfile
 from types import SimpleNamespace
@@ -68,6 +69,42 @@ class SelectedVideoCacheTests(unittest.TestCase):
         self.extractor.assert_called_once()
         finch.assert_called_once()
         self.assertEqual(before, {p: p.read_bytes() for p in before})
+
+    def test_moved_project_reuses_all_stages_even_when_case_id_changes(self):
+        store, cases = self.prepare(videos=[self.source], allow_idt=True)
+        finch = self.cluster(store, cases)
+        with tempfile.TemporaryDirectory() as destination:
+            moved = Path(destination) / "RAVEE moved"
+            shutil.copytree(self.root, moved)
+            source = moved / 'video_input' / self.source.name
+            (source.parent / 'aaa.mp4').write_bytes(b'unselected input')
+            settings = (15, 640, 480)
+            moved_cache = moved / 'cache'
+            before = {p: p.read_bytes() for p in moved_cache.rglob('complete.json')}
+
+            status = cache.inspect_video_cache(moved, moved_cache, source, settings)
+            self.assertEqual(status['status'], 'Cached')
+            relocated, selected = cache.prepare_features(
+                moved, moved_cache, self.reducer, settings, self.extractor, videos=[source])
+            case, = selected.values()
+            self.assertEqual(case['case_id'], 2)
+            self.assertEqual(Path(case['video_path']).name, f'1_{source.stem}_reduced.avi')
+            cache.cached_finch(relocated, case, None, finch, moved)
+            self.assertEqual(before, {p: p.read_bytes() for p in moved_cache.rglob('complete.json')})
+
+            changed_settings = cache.inspect_video_cache(moved, moved_cache, source, (10, 640, 480))
+            self.assertEqual(changed_settings['status'], 'New')
+            source.write_bytes(b'changed source')
+            self.assertEqual(cache.inspect_video_cache(moved, moved_cache, source, settings)['status'], 'New')
+            source.write_bytes(self.source.read_bytes())
+            Path(case['video_path']).write_bytes(b'changed cache artifact')
+            self.assertEqual(cache.inspect_video_cache(moved, moved_cache, source, settings)['status'], 'New')
+
+        self.reducer.assert_called_once()
+        self.idt.assert_called_once()
+        self.extractor.assert_called_once()
+        self.image.assert_called_once()
+        finch.assert_called_once()
 
     def test_new_inspection_does_not_create_cache_or_start_producers(self):
         status = self.status()

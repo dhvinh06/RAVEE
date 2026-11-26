@@ -12,11 +12,11 @@
 			<string key="activity" value="Folding green paper in half" />
 			<int key="frame_start" value="0" />
 			<int key="frame_end" value="183" />
-			<date key="timestamp_start" value="2026-11-17T17:45:52+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:46:04.266667+00:00" />
+			<date key="timestamp_start" value="2026-11-17T19:12:46+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:12:58.266667+00:00" />
 			<float key="duration_seconds" value="12.266666666666667" />
 			<string key="concept:name" value="Folding green paper in half" />
-			<date key="time:timestamp" value="2026-11-17T17:45:52+00:00" />
+			<date key="time:timestamp" value="2026-11-17T19:12:46+00:00" />
 			<int key="@@index" value="0" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -27,11 +27,11 @@
 			<string key="activity" value="Unfolding and refolding paper vertically" />
 			<int key="frame_start" value="184" />
 			<int key="frame_end" value="271" />
-			<date key="timestamp_start" value="2026-11-17T17:46:04.266667+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:46:10.133333+00:00" />
+			<date key="timestamp_start" value="2026-11-17T19:12:58.266667+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:13:04.133333+00:00" />
 			<float key="duration_seconds" value="5.866666666666666" />
 			<string key="concept:name" value="Unfolding and refolding paper vertically" />
-			<date key="time:timestamp" value="2026-11-17T17:46:04.266667+00:00" />
+			<date key="time:timestamp" value="2026-11-17T19:12:58.266667+00:00" />
 			<int key="@@index" value="1" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -42,11 +42,11 @@
 			<string key="activity" value="Rotating and smoothing folded paper" />
 			<int key="frame_start" value="272" />
 			<int key="frame_end" value="371" />
-			<date key="timestamp_start" value="2026-11-17T17:46:10.133333+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:46:16.800000+00:00" />
+			<date key="timestamp_start" value="2026-11-17T19:13:04.133333+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:13:10.800000+00:00" />
 			<float key="duration_seconds" value="6.666666666666667" />
 			<string key="concept:name" value="Rotating and smoothing folded paper" />
-			<date key="time:timestamp" value="2026-11-17T17:46:10.133333+00:00" />
+			<date key="time:timestamp" value="2026-11-17T19:13:04.133333+00:00" />
 			<int key="@@index" value="2" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -57,11 +57,11 @@
 			<string key="activity" value="Folding top corners to center line" />
 			<int key="frame_start" value="372" />
 			<int key="frame_end" value="427" />
-			<date key="timestamp_start" value="2026-11-17T17:46:16.800000+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:46:20.533333+00:00" />
+			<date key="timestamp_start" value="2026-11-17T19:13:10.800000+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:13:14.533333+00:00" />
 			<float key="duration_seconds" value="3.7333333333333334" />
 			<string key="concept:name" value="Folding top corners to center line" />
-			<date key="time:timestamp" value="2026-11-17T17:46:16.800000+00:00" />
+			<date key="time:timestamp" value="2026-11-17T19:13:10.800000+00:00" />
 			<int key="@@index" value="3" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -72,11 +72,11 @@
 			<string key="activity" value="Folding left corner to center" />
 			<int key="frame_start" value="428" />
 			<int key="frame_end" value="474" />
-			<date key="timestamp_start" value="2026-11-17T17:46:20.533333+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:46:23.666667+00:00" />
+			<date key="timestamp_start" value="2026-11-17T19:13:14.533333+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:13:17.666667+00:00" />
 			<float key="duration_seconds" value="3.1333333333333333" />
 			<string key="concept:name" value="Folding left corner to center" />
-			<date key="time:timestamp" value="2026-11-17T17:46:20.533333+00:00" />
+			<date key="time:timestamp" value="2026-11-17T19:13:14.533333+00:00" />
 			<int key="@@index" value="4" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -87,11 +87,11 @@
 			<string key="activity" value="Creasing the triangular fold" />
 			<int key="frame_start" value="475" />
 			<int key="frame_end" value="624" />
-			<date key="timestamp_start" value="2026-11-17T17:46:23.666667+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:46:33.666667+00:00" />
+			<date key="timestamp_start" value="2026-11-17T19:13:17.666667+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:13:27.666667+00:00" />
 			<float key="duration_seconds" value="10.0" />
 			<string key="concept:name" value="Creasing the triangular fold" />
-			<date key="time:timestamp" value="2026-11-17T17:46:23.666667+00:00" />
+			<date key="time:timestamp" value="2026-11-17T19:13:17.666667+00:00" />
 			<int key="@@index" value="5" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -102,11 +102,11 @@
 			<string key="activity" value="Folding bottom strip upward" />
 			<int key="frame_start" value="625" />
 			<int key="frame_end" value="721" />
-			<date key="timestamp_start" value="2026-11-17T17:46:33.666667+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:46:40.133333+00:00" />
+			<date key="timestamp_start" value="2026-11-17T19:13:27.666667+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:13:34.133333+00:00" />
 			<float key="duration_seconds" value="6.466666666666667" />
 			<string key="concept:name" value="Folding bottom strip upward" />
-			<date key="time:timestamp" value="2026-11-17T17:46:33.666667+00:00" />
+			<date key="time:timestamp" value="2026-11-17T19:13:27.666667+00:00" />
 			<int key="@@index" value="6" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -117,11 +117,11 @@
 			<string key="activity" value="Flipping paper over" />
 			<int key="frame_start" value="722" />
 			<int key="frame_end" value="806" />
-			<date key="timestamp_start" value="2026-11-17T17:46:40.133333+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:46:45.800000+00:00" />
+			<date key="timestamp_start" value="2026-11-17T19:13:34.133333+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:13:39.800000+00:00" />
 			<float key="duration_seconds" value="5.666666666666667" />
 			<string key="concept:name" value="Flipping paper over" />
-			<date key="time:timestamp" value="2026-11-17T17:46:40.133333+00:00" />
+			<date key="time:timestamp" value="2026-11-17T19:13:34.133333+00:00" />
 			<int key="@@index" value="7" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -132,11 +132,11 @@
 			<string key="activity" value="Folding side corners inward" />
 			<int key="frame_start" value="807" />
 			<int key="frame_end" value="894" />
-			<date key="timestamp_start" value="2026-11-17T17:46:45.800000+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:46:51.666667+00:00" />
+			<date key="timestamp_start" value="2026-11-17T19:13:39.800000+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:13:45.666667+00:00" />
 			<float key="duration_seconds" value="5.866666666666666" />
 			<string key="concept:name" value="Folding side corners inward" />
-			<date key="time:timestamp" value="2026-11-17T17:46:45.800000+00:00" />
+			<date key="time:timestamp" value="2026-11-17T19:13:39.800000+00:00" />
 			<int key="@@index" value="8" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -147,11 +147,11 @@
 			<string key="activity" value="Smoothing the folded tabs" />
 			<int key="frame_start" value="895" />
 			<int key="frame_end" value="928" />
-			<date key="timestamp_start" value="2026-11-17T17:46:51.666667+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:46:53.933333+00:00" />
+			<date key="timestamp_start" value="2026-11-17T19:13:45.666667+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:13:47.933333+00:00" />
 			<float key="duration_seconds" value="2.2666666666666666" />
 			<string key="concept:name" value="Smoothing the folded tabs" />
-			<date key="time:timestamp" value="2026-11-17T17:46:51.666667+00:00" />
+			<date key="time:timestamp" value="2026-11-17T19:13:45.666667+00:00" />
 			<int key="@@index" value="9" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -162,11 +162,11 @@
 			<string key="activity" value="Folding bottom edge up again" />
 			<int key="frame_start" value="929" />
 			<int key="frame_end" value="941" />
-			<date key="timestamp_start" value="2026-11-17T17:46:53.933333+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:46:54.800000+00:00" />
+			<date key="timestamp_start" value="2026-11-17T19:13:47.933333+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:13:48.800000+00:00" />
 			<float key="duration_seconds" value="0.8666666666666667" />
 			<string key="concept:name" value="Folding bottom edge up again" />
-			<date key="time:timestamp" value="2026-11-17T17:46:53.933333+00:00" />
+			<date key="time:timestamp" value="2026-11-17T19:13:47.933333+00:00" />
 			<int key="@@index" value="10" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -177,11 +177,11 @@
 			<string key="activity" value="Creasing the bottom fold" />
 			<int key="frame_start" value="942" />
 			<int key="frame_end" value="970" />
-			<date key="timestamp_start" value="2026-11-17T17:46:54.800000+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:46:56.733333+00:00" />
+			<date key="timestamp_start" value="2026-11-17T19:13:48.800000+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:13:50.733333+00:00" />
 			<float key="duration_seconds" value="1.9333333333333333" />
 			<string key="concept:name" value="Creasing the bottom fold" />
-			<date key="time:timestamp" value="2026-11-17T17:46:54.800000+00:00" />
+			<date key="time:timestamp" value="2026-11-17T19:13:48.800000+00:00" />
 			<int key="@@index" value="11" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -192,11 +192,11 @@
 			<string key="activity" value="Folding side flaps inward" />
 			<int key="frame_start" value="971" />
 			<int key="frame_end" value="1021" />
-			<date key="timestamp_start" value="2026-11-17T17:46:56.733333+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:47:00.133333+00:00" />
+			<date key="timestamp_start" value="2026-11-17T19:13:50.733333+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:13:54.133333+00:00" />
 			<float key="duration_seconds" value="3.4" />
 			<string key="concept:name" value="Folding side flaps inward" />
-			<date key="time:timestamp" value="2026-11-17T17:46:56.733333+00:00" />
+			<date key="time:timestamp" value="2026-11-17T19:13:50.733333+00:00" />
 			<int key="@@index" value="12" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -207,11 +207,11 @@
 			<string key="activity" value="Pressing the side folds flat" />
 			<int key="frame_start" value="1022" />
 			<int key="frame_end" value="1071" />
-			<date key="timestamp_start" value="2026-11-17T17:47:00.133333+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:47:03.466667+00:00" />
+			<date key="timestamp_start" value="2026-11-17T19:13:54.133333+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:13:57.466667+00:00" />
 			<float key="duration_seconds" value="3.3333333333333335" />
 			<string key="concept:name" value="Pressing the side folds flat" />
-			<date key="time:timestamp" value="2026-11-17T17:47:00.133333+00:00" />
+			<date key="time:timestamp" value="2026-11-17T19:13:54.133333+00:00" />
 			<int key="@@index" value="13" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -222,11 +222,11 @@
 			<string key="activity" value="Folding paper in half vertically" />
 			<int key="frame_start" value="1072" />
 			<int key="frame_end" value="1185" />
-			<date key="timestamp_start" value="2026-11-17T17:47:03.466667+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:47:11.066667+00:00" />
+			<date key="timestamp_start" value="2026-11-17T19:13:57.466667+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:14:05.066667+00:00" />
 			<float key="duration_seconds" value="7.6" />
 			<string key="concept:name" value="Folding paper in half vertically" />
-			<date key="time:timestamp" value="2026-11-17T17:47:03.466667+00:00" />
+			<date key="time:timestamp" value="2026-11-17T19:13:57.466667+00:00" />
 			<int key="@@index" value="14" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -237,11 +237,11 @@
 			<string key="activity" value="Flattening the diamond shape" />
 			<int key="frame_start" value="1186" />
 			<int key="frame_end" value="1247" />
-			<date key="timestamp_start" value="2026-11-17T17:47:11.066667+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:47:15.200000+00:00" />
+			<date key="timestamp_start" value="2026-11-17T19:14:05.066667+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:14:09.200000+00:00" />
 			<float key="duration_seconds" value="4.133333333333334" />
 			<string key="concept:name" value="Flattening the diamond shape" />
-			<date key="time:timestamp" value="2026-11-17T17:47:11.066667+00:00" />
+			<date key="time:timestamp" value="2026-11-17T19:14:05.066667+00:00" />
 			<int key="@@index" value="15" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -252,11 +252,11 @@
 			<string key="activity" value="Folding top corners down" />
 			<int key="frame_start" value="1248" />
 			<int key="frame_end" value="1359" />
-			<date key="timestamp_start" value="2026-11-17T17:47:15.200000+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:47:22.666667+00:00" />
+			<date key="timestamp_start" value="2026-11-17T19:14:09.200000+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:14:16.666667+00:00" />
 			<float key="duration_seconds" value="7.466666666666667" />
 			<string key="concept:name" value="Folding top corners down" />
-			<date key="time:timestamp" value="2026-11-17T17:47:15.200000+00:00" />
+			<date key="time:timestamp" value="2026-11-17T19:14:09.200000+00:00" />
 			<int key="@@index" value="16" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -267,11 +267,11 @@
 			<string key="activity" value="Creasing the corner folds" />
 			<int key="frame_start" value="1360" />
 			<int key="frame_end" value="1441" />
-			<date key="timestamp_start" value="2026-11-17T17:47:22.666667+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:47:28.133333+00:00" />
+			<date key="timestamp_start" value="2026-11-17T19:14:16.666667+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:14:22.133333+00:00" />
 			<float key="duration_seconds" value="5.466666666666667" />
 			<string key="concept:name" value="Creasing the corner folds" />
-			<date key="time:timestamp" value="2026-11-17T17:47:22.666667+00:00" />
+			<date key="time:timestamp" value="2026-11-17T19:14:16.666667+00:00" />
 			<int key="@@index" value="17" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -282,11 +282,11 @@
 			<string key="activity" value="Folding bottom corners up" />
 			<int key="frame_start" value="1442" />
 			<int key="frame_end" value="1561" />
-			<date key="timestamp_start" value="2026-11-17T17:47:28.133333+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:47:36.133333+00:00" />
+			<date key="timestamp_start" value="2026-11-17T19:14:22.133333+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:14:30.133333+00:00" />
 			<float key="duration_seconds" value="8.0" />
 			<string key="concept:name" value="Folding bottom corners up" />
-			<date key="time:timestamp" value="2026-11-17T17:47:28.133333+00:00" />
+			<date key="time:timestamp" value="2026-11-17T19:14:22.133333+00:00" />
 			<int key="@@index" value="18" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -297,11 +297,11 @@
 			<string key="activity" value="Smoothing the triangular shape" />
 			<int key="frame_start" value="1562" />
 			<int key="frame_end" value="1654" />
-			<date key="timestamp_start" value="2026-11-17T17:47:36.133333+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:47:42.333333+00:00" />
+			<date key="timestamp_start" value="2026-11-17T19:14:30.133333+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:14:36.333333+00:00" />
 			<float key="duration_seconds" value="6.2" />
 			<string key="concept:name" value="Smoothing the triangular shape" />
-			<date key="time:timestamp" value="2026-11-17T17:47:36.133333+00:00" />
+			<date key="time:timestamp" value="2026-11-17T19:14:30.133333+00:00" />
 			<int key="@@index" value="19" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -312,11 +312,11 @@
 			<string key="activity" value="Folding triangle in half" />
 			<int key="frame_start" value="1655" />
 			<int key="frame_end" value="1763" />
-			<date key="timestamp_start" value="2026-11-17T17:47:42.333333+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:47:49.600000+00:00" />
+			<date key="timestamp_start" value="2026-11-17T19:14:36.333333+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:14:43.600000+00:00" />
 			<float key="duration_seconds" value="7.266666666666667" />
 			<string key="concept:name" value="Folding triangle in half" />
-			<date key="time:timestamp" value="2026-11-17T17:47:42.333333+00:00" />
+			<date key="time:timestamp" value="2026-11-17T19:14:36.333333+00:00" />
 			<int key="@@index" value="20" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -327,11 +327,11 @@
 			<string key="activity" value="Opening the paper boat base" />
 			<int key="frame_start" value="1764" />
 			<int key="frame_end" value="1958" />
-			<date key="timestamp_start" value="2026-11-17T17:47:49.600000+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:48:02.600000+00:00" />
+			<date key="timestamp_start" value="2026-11-17T19:14:43.600000+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:14:56.600000+00:00" />
 			<float key="duration_seconds" value="13.0" />
 			<string key="concept:name" value="Opening the paper boat base" />
-			<date key="time:timestamp" value="2026-11-17T17:47:49.600000+00:00" />
+			<date key="time:timestamp" value="2026-11-17T19:14:43.600000+00:00" />
 			<int key="@@index" value="21" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -342,11 +342,11 @@
 			<string key="activity" value="Flattening the boat shape" />
 			<int key="frame_start" value="1959" />
 			<int key="frame_end" value="2009" />
-			<date key="timestamp_start" value="2026-11-17T17:48:02.600000+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:48:06+00:00" />
+			<date key="timestamp_start" value="2026-11-17T19:14:56.600000+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:15:00+00:00" />
 			<float key="duration_seconds" value="3.4" />
 			<string key="concept:name" value="Flattening the boat shape" />
-			<date key="time:timestamp" value="2026-11-17T17:48:02.600000+00:00" />
+			<date key="time:timestamp" value="2026-11-17T19:14:56.600000+00:00" />
 			<int key="@@index" value="22" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -357,11 +357,11 @@
 			<string key="activity" value="Folding top layer corners down" />
 			<int key="frame_start" value="2010" />
 			<int key="frame_end" value="2118" />
-			<date key="timestamp_start" value="2026-11-17T17:48:06+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:48:13.266667+00:00" />
+			<date key="timestamp_start" value="2026-11-17T19:15:00+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:15:07.266667+00:00" />
 			<float key="duration_seconds" value="7.266666666666667" />
 			<string key="concept:name" value="Folding top layer corners down" />
-			<date key="time:timestamp" value="2026-11-17T17:48:06+00:00" />
+			<date key="time:timestamp" value="2026-11-17T19:15:00+00:00" />
 			<int key="@@index" value="23" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -372,11 +372,11 @@
 			<string key="activity" value="Creasing the corner folds" />
 			<int key="frame_start" value="2119" />
 			<int key="frame_end" value="2210" />
-			<date key="timestamp_start" value="2026-11-17T17:48:13.266667+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:48:19.400000+00:00" />
+			<date key="timestamp_start" value="2026-11-17T19:15:07.266667+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:15:13.400000+00:00" />
 			<float key="duration_seconds" value="6.133333333333334" />
 			<string key="concept:name" value="Creasing the corner folds" />
-			<date key="time:timestamp" value="2026-11-17T17:48:13.266667+00:00" />
+			<date key="time:timestamp" value="2026-11-17T19:15:07.266667+00:00" />
 			<int key="@@index" value="24" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -387,11 +387,11 @@
 			<string key="activity" value="Flipping and adjusting boat" />
 			<int key="frame_start" value="2211" />
 			<int key="frame_end" value="2324" />
-			<date key="timestamp_start" value="2026-11-17T17:48:19.400000+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:48:27+00:00" />
+			<date key="timestamp_start" value="2026-11-17T19:15:13.400000+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:15:21+00:00" />
 			<float key="duration_seconds" value="7.6" />
 			<string key="concept:name" value="Flipping and adjusting boat" />
-			<date key="time:timestamp" value="2026-11-17T17:48:19.400000+00:00" />
+			<date key="time:timestamp" value="2026-11-17T19:15:13.400000+00:00" />
 			<int key="@@index" value="25" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -402,11 +402,11 @@
 			<string key="activity" value="Final adjustments to paper boat" />
 			<int key="frame_start" value="2325" />
 			<int key="frame_end" value="2349" />
-			<date key="timestamp_start" value="2026-11-17T17:48:27+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:48:28.666667+00:00" />
+			<date key="timestamp_start" value="2026-11-17T19:15:21+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:15:22.666667+00:00" />
 			<float key="duration_seconds" value="1.6666666666666667" />
 			<string key="concept:name" value="Final adjustments to paper boat" />
-			<date key="time:timestamp" value="2026-11-17T17:48:27+00:00" />
+			<date key="time:timestamp" value="2026-11-17T19:15:21+00:00" />
 			<int key="@@index" value="26" />
 			<int key="@@case_index" value="0" />
 		</event>

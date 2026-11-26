@@ -10,15 +10,15 @@
 			<string key="activity" value="Folding green paper in half" />
 			<int key="frame_start" value="0" />
 			<int key="frame_end" value="183" />
-			<date key="timestamp_start" value="2026-11-17T17:45:52+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:46:04.266667+00:00" />
+			<date key="timestamp_start" value="2026-11-17T19:12:46+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:12:58.266667+00:00" />
 			<float key="duration_seconds" value="12.266666666666667" />
 			<string key="source_segment_ids" value="1" />
 			<string key="source_activities" value="Folding green paper in half" />
 			<int key="task_group_id" value="1" />
 			<string key="group_explanation" value="Original segment; no semantic merge confirmed" />
 			<string key="concept:name" value="Folding green paper in half" />
-			<date key="time:timestamp" value="2026-11-17T17:45:52+00:00" />
+			<date key="time:timestamp" value="2026-11-17T19:12:46+00:00" />
 			<int key="@@index" value="0" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -27,15 +27,15 @@
 			<string key="activity" value="Unfolding and refolding paper vertically" />
 			<int key="frame_start" value="184" />
 			<int key="frame_end" value="271" />
-			<date key="timestamp_start" value="2026-11-17T17:46:04.266667+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:46:10.133333+00:00" />
+			<date key="timestamp_start" value="2026-11-17T19:12:58.266667+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:13:04.133333+00:00" />
 			<float key="duration_seconds" value="5.866666666666666" />
 			<string key="source_segment_ids" value="2" />
 			<string key="source_activities" value="Unfolding and refolding paper vertically" />
 			<int key="task_group_id" value="2" />
 			<string key="group_explanation" value="Original segment; no semantic merge confirmed" />
 			<string key="concept:name" value="Unfolding and refolding paper vertically" />
-			<date key="time:timestamp" value="2026-11-17T17:46:04.266667+00:00" />
+			<date key="time:timestamp" value="2026-11-17T19:12:58.266667+00:00" />
 			<int key="@@index" value="1" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -44,32 +44,32 @@
 			<string key="activity" value="Rotating and smoothing folded paper" />
 			<int key="frame_start" value="272" />
 			<int key="frame_end" value="371" />
-			<date key="timestamp_start" value="2026-11-17T17:46:10.133333+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:46:16.800000+00:00" />
+			<date key="timestamp_start" value="2026-11-17T19:13:04.133333+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:13:10.800000+00:00" />
 			<float key="duration_seconds" value="6.666666666666667" />
 			<string key="source_segment_ids" value="3" />
 			<string key="source_activities" value="Rotating and smoothing folded paper" />
 			<int key="task_group_id" value="3" />
 			<string key="group_explanation" value="Original segment; no semantic merge confirmed" />
 			<string key="concept:name" value="Rotating and smoothing folded paper" />
-			<date key="time:timestamp" value="2026-11-17T17:46:10.133333+00:00" />
+			<date key="time:timestamp" value="2026-11-17T19:13:04.133333+00:00" />
 			<int key="@@index" value="2" />
 			<int key="@@case_index" value="0" />
 		</event>
 		<event>
 			<int key="videoID" value="2" />
-			<string key="activity" value="Fold top corners to center line to form triangle" />
+			<string key="activity" value="Folding top corners to center line to form triangle" />
 			<int key="frame_start" value="372" />
 			<int key="frame_end" value="624" />
-			<date key="timestamp_start" value="2026-11-17T17:46:16.800000+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:46:33.666667+00:00" />
+			<date key="timestamp_start" value="2026-11-17T19:13:10.800000+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:13:27.666667+00:00" />
 			<float key="duration_seconds" value="16.866666666666667" />
 			<string key="source_segment_ids" value="4,5,6" />
 			<string key="source_activities" value="Folding top corners to center line | Folding left corner to center | Creasing the triangular fold" />
 			<int key="task_group_id" value="4" />
-			<string key="group_explanation" value="The same green paper is being folded. Segment 4 folds the right corner, and segment 5 folds the left corner to the same center line, completing the triangular shape together.; The same paper with the newly formed triangle is handled. Segment 5 completes the fold, and segment 6 shows the hands pressing and creasing the triangular folds to secure them." />
-			<string key="concept:name" value="Fold top corners to center line to form triangle" />
-			<date key="time:timestamp" value="2026-11-17T17:46:16.800000+00:00" />
+			<string key="group_explanation" value="The same paper is being folded. Segment 4 folds the right corner, and segment 5 immediately folds the left corner to the same center line, completing the triangular top shape.; The same paper is handled. After folding both corners (segment 5), segment 6 shows the hands pressing and creasing the newly formed triangular shape to secure the folds." />
+			<string key="concept:name" value="Folding top corners to center line to form triangle" />
+			<date key="time:timestamp" value="2026-11-17T19:13:10.800000+00:00" />
 			<int key="@@index" value="3" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -78,15 +78,15 @@
 			<string key="activity" value="Folding bottom strip upward" />
 			<int key="frame_start" value="625" />
 			<int key="frame_end" value="721" />
-			<date key="timestamp_start" value="2026-11-17T17:46:33.666667+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:46:40.133333+00:00" />
+			<date key="timestamp_start" value="2026-11-17T19:13:27.666667+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:13:34.133333+00:00" />
 			<float key="duration_seconds" value="6.466666666666667" />
 			<string key="source_segment_ids" value="7" />
 			<string key="source_activities" value="Folding bottom strip upward" />
 			<int key="task_group_id" value="5" />
 			<string key="group_explanation" value="Original segment; no semantic merge confirmed" />
 			<string key="concept:name" value="Folding bottom strip upward" />
-			<date key="time:timestamp" value="2026-11-17T17:46:33.666667+00:00" />
+			<date key="time:timestamp" value="2026-11-17T19:13:27.666667+00:00" />
 			<int key="@@index" value="4" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -95,117 +95,117 @@
 			<string key="activity" value="Flipping paper over" />
 			<int key="frame_start" value="722" />
 			<int key="frame_end" value="806" />
-			<date key="timestamp_start" value="2026-11-17T17:46:40.133333+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:46:45.800000+00:00" />
+			<date key="timestamp_start" value="2026-11-17T19:13:34.133333+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:13:39.800000+00:00" />
 			<float key="duration_seconds" value="5.666666666666667" />
 			<string key="source_segment_ids" value="8" />
 			<string key="source_activities" value="Flipping paper over" />
 			<int key="task_group_id" value="6" />
 			<string key="group_explanation" value="Original segment; no semantic merge confirmed" />
 			<string key="concept:name" value="Flipping paper over" />
-			<date key="time:timestamp" value="2026-11-17T17:46:40.133333+00:00" />
+			<date key="time:timestamp" value="2026-11-17T19:13:34.133333+00:00" />
 			<int key="@@index" value="5" />
 			<int key="@@case_index" value="0" />
 		</event>
 		<event>
 			<int key="videoID" value="2" />
-			<string key="activity" value="Fold side corners inward and smooth tabs" />
+			<string key="activity" value="Folding side corners inward and creasing bottom edge" />
 			<int key="frame_start" value="807" />
-			<int key="frame_end" value="928" />
-			<date key="timestamp_start" value="2026-11-17T17:46:45.800000+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:46:53.933333+00:00" />
-			<float key="duration_seconds" value="8.133333333333333" />
-			<string key="source_segment_ids" value="9,10" />
-			<string key="source_activities" value="Folding side corners inward | Smoothing the folded tabs" />
+			<int key="frame_end" value="970" />
+			<date key="timestamp_start" value="2026-11-17T19:13:39.800000+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:13:50.733333+00:00" />
+			<float key="duration_seconds" value="10.933333333333334" />
+			<string key="source_segment_ids" value="9,10,11,12" />
+			<string key="source_activities" value="Folding side corners inward | Smoothing the folded tabs | Folding bottom edge up again | Creasing the bottom fold" />
 			<int key="task_group_id" value="7" />
-			<string key="group_explanation" value="The same paper is handled. Segment 9 shows the side corners being folded inward. Segment 10 shows the hands smoothing the resulting tabs, refining the same fold." />
-			<string key="concept:name" value="Fold side corners inward and smooth tabs" />
-			<date key="time:timestamp" value="2026-11-17T17:46:45.800000+00:00" />
+			<string key="group_explanation" value="The same paper is handled. Segment 9 folds the side corners inward. Segment 10 shows the hands smoothing and pressing those newly folded tabs flat.; The same paper is present. After smoothing the tabs (segment 10), segment 11 shows the bottom edge being folded up again, continuing the refinement of the base shape.; The same paper is handled. Segment 11 folds the bottom edge up. Segment 12 shows the hands pressing and creasing that new fold flat, completing the action." />
+			<string key="concept:name" value="Folding side corners inward and creasing bottom edge" />
+			<date key="time:timestamp" value="2026-11-17T19:13:39.800000+00:00" />
 			<int key="@@index" value="6" />
 			<int key="@@case_index" value="0" />
 		</event>
 		<event>
 			<int key="videoID" value="2" />
-			<string key="activity" value="Fold bottom edge up and crease firmly" />
-			<int key="frame_start" value="929" />
-			<int key="frame_end" value="970" />
-			<date key="timestamp_start" value="2026-11-17T17:46:53.933333+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:46:56.733333+00:00" />
-			<float key="duration_seconds" value="2.8" />
-			<string key="source_segment_ids" value="11,12" />
-			<string key="source_activities" value="Folding bottom edge up again | Creasing the bottom fold" />
+			<string key="activity" value="Folding and creasing bottom edge and side flaps" />
+			<int key="frame_start" value="971" />
+			<int key="frame_end" value="1071" />
+			<date key="timestamp_start" value="2026-11-17T19:13:50.733333+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:13:57.466667+00:00" />
+			<float key="duration_seconds" value="6.733333333333333" />
+			<string key="source_segment_ids" value="13,14" />
+			<string key="source_activities" value="Folding side flaps inward | Pressing the side folds flat" />
 			<int key="task_group_id" value="8" />
-			<string key="group_explanation" value="The same paper is handled. Segment 11 shows the bottom edge being folded up. Segment 12 shows the hands pressing down to crease that same fold firmly." />
-			<string key="concept:name" value="Fold bottom edge up and crease firmly" />
-			<date key="time:timestamp" value="2026-11-17T17:46:53.933333+00:00" />
+			<string key="group_explanation" value="Same green paper. Segment 13 folds the side flaps, segment 14 presses them flat to secure the fold." />
+			<string key="concept:name" value="Folding and creasing bottom edge and side flaps" />
+			<date key="time:timestamp" value="2026-11-17T19:13:50.733333+00:00" />
 			<int key="@@index" value="7" />
 			<int key="@@case_index" value="0" />
 		</event>
 		<event>
 			<int key="videoID" value="2" />
-			<string key="activity" value="Folding and creasing the bottom edge and side flaps" />
-			<int key="frame_start" value="971" />
-			<int key="frame_end" value="1071" />
-			<date key="timestamp_start" value="2026-11-17T17:46:56.733333+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:47:03.466667+00:00" />
-			<float key="duration_seconds" value="6.733333333333333" />
-			<string key="source_segment_ids" value="13,14" />
-			<string key="source_activities" value="Folding side flaps inward | Pressing the side folds flat" />
+			<string key="activity" value="Folding paper in half vertically and flattening diamond shape" />
+			<int key="frame_start" value="1072" />
+			<int key="frame_end" value="1247" />
+			<date key="timestamp_start" value="2026-11-17T19:13:57.466667+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:14:09.200000+00:00" />
+			<float key="duration_seconds" value="11.733333333333334" />
+			<string key="source_segment_ids" value="15,16" />
+			<string key="source_activities" value="Folding paper in half vertically | Flattening the diamond shape" />
 			<int key="task_group_id" value="9" />
-			<string key="group_explanation" value="The same green paper is being worked on. Segment 13 folds the side flaps, and segment 14 presses them flat to secure the fold, completing the side flap shaping." />
-			<string key="concept:name" value="Folding and creasing the bottom edge and side flaps" />
-			<date key="time:timestamp" value="2026-11-17T17:46:56.733333+00:00" />
+			<string key="group_explanation" value="Same green paper. Segment 15 folds the paper in half, segment 16 flattens the resulting diamond shape, completing the fold." />
+			<string key="concept:name" value="Folding paper in half vertically and flattening diamond shape" />
+			<date key="time:timestamp" value="2026-11-17T19:13:57.466667+00:00" />
 			<int key="@@index" value="8" />
 			<int key="@@case_index" value="0" />
 		</event>
 		<event>
 			<int key="videoID" value="2" />
-			<string key="activity" value="Folding paper in half vertically and flattening into diamond shape" />
-			<int key="frame_start" value="1072" />
-			<int key="frame_end" value="1247" />
-			<date key="timestamp_start" value="2026-11-17T17:47:03.466667+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:47:15.200000+00:00" />
-			<float key="duration_seconds" value="11.733333333333334" />
-			<string key="source_segment_ids" value="15,16" />
-			<string key="source_activities" value="Folding paper in half vertically | Flattening the diamond shape" />
+			<string key="activity" value="Folding top corners down and creasing folds" />
+			<int key="frame_start" value="1248" />
+			<int key="frame_end" value="1441" />
+			<date key="timestamp_start" value="2026-11-17T19:14:09.200000+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:14:22.133333+00:00" />
+			<float key="duration_seconds" value="12.933333333333334" />
+			<string key="source_segment_ids" value="17,18" />
+			<string key="source_activities" value="Folding top corners down | Creasing the corner folds" />
 			<int key="task_group_id" value="10" />
-			<string key="group_explanation" value="The same green paper is folded in half in segment 15, and segment 16 continues by flattening the resulting diamond shape. The actions are sequential steps in forming the diamond." />
-			<string key="concept:name" value="Folding paper in half vertically and flattening into diamond shape" />
-			<date key="time:timestamp" value="2026-11-17T17:47:03.466667+00:00" />
+			<string key="group_explanation" value="Same green paper. Segment 17 folds the top corners, segment 18 presses and creases those same folds flat." />
+			<string key="concept:name" value="Folding top corners down and creasing folds" />
+			<date key="time:timestamp" value="2026-11-17T19:14:09.200000+00:00" />
 			<int key="@@index" value="9" />
 			<int key="@@case_index" value="0" />
 		</event>
 		<event>
 			<int key="videoID" value="2" />
-			<string key="activity" value="Folding top and bottom corners to form triangle" />
-			<int key="frame_start" value="1248" />
-			<int key="frame_end" value="1561" />
-			<date key="timestamp_start" value="2026-11-17T17:47:15.200000+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:47:36.133333+00:00" />
-			<float key="duration_seconds" value="20.933333333333334" />
-			<string key="source_segment_ids" value="17,18,19" />
-			<string key="source_activities" value="Folding top corners down | Creasing the corner folds | Folding bottom corners up" />
+			<string key="activity" value="Folding bottom corners up and smoothing triangular shape" />
+			<int key="frame_start" value="1442" />
+			<int key="frame_end" value="1654" />
+			<date key="timestamp_start" value="2026-11-17T19:14:22.133333+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:14:36.333333+00:00" />
+			<float key="duration_seconds" value="14.2" />
+			<string key="source_segment_ids" value="19,20" />
+			<string key="source_activities" value="Folding bottom corners up | Smoothing the triangular shape" />
 			<int key="task_group_id" value="11" />
-			<string key="group_explanation" value="The same green paper is being folded. Segment 17 folds the top corners, and segment 18 creases those folds to secure them, continuing the triangle formation.; The same green paper is manipulated. After creasing the top corners (segment 18), the bottom corners are folded up (segment 19) to complete the triangle shape." />
-			<string key="concept:name" value="Folding top and bottom corners to form triangle" />
-			<date key="time:timestamp" value="2026-11-17T17:47:15.200000+00:00" />
+			<string key="group_explanation" value="Same green paper. Segment 19 folds bottom corners up to form a triangle, segment 20 smooths and presses that triangle flat." />
+			<string key="concept:name" value="Folding bottom corners up and smoothing triangular shape" />
+			<date key="time:timestamp" value="2026-11-17T19:14:22.133333+00:00" />
 			<int key="@@index" value="10" />
 			<int key="@@case_index" value="0" />
 		</event>
 		<event>
 			<int key="videoID" value="2" />
-			<string key="activity" value="Smoothing and folding the triangle in half" />
-			<int key="frame_start" value="1562" />
+			<string key="activity" value="Folding triangle in half" />
+			<int key="frame_start" value="1655" />
 			<int key="frame_end" value="1763" />
-			<date key="timestamp_start" value="2026-11-17T17:47:36.133333+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:47:49.600000+00:00" />
-			<float key="duration_seconds" value="13.466666666666667" />
-			<string key="source_segment_ids" value="20,21" />
-			<string key="source_activities" value="Smoothing the triangular shape | Folding triangle in half" />
+			<date key="timestamp_start" value="2026-11-17T19:14:36.333333+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:14:43.600000+00:00" />
+			<float key="duration_seconds" value="7.266666666666667" />
+			<string key="source_segment_ids" value="21" />
+			<string key="source_activities" value="Folding triangle in half" />
 			<int key="task_group_id" value="12" />
-			<string key="group_explanation" value="The same green paper triangle is smoothed in segment 20 and then folded in half in segment 21. These are sequential steps in preparing the paper for the boat base." />
-			<string key="concept:name" value="Smoothing and folding the triangle in half" />
-			<date key="time:timestamp" value="2026-11-17T17:47:36.133333+00:00" />
+			<string key="group_explanation" value="Original segment; no semantic merge confirmed" />
+			<string key="concept:name" value="Folding triangle in half" />
+			<date key="time:timestamp" value="2026-11-17T19:14:36.333333+00:00" />
 			<int key="@@index" value="11" />
 			<int key="@@case_index" value="0" />
 		</event>
@@ -214,84 +214,50 @@
 			<string key="activity" value="Opening and flattening the paper boat base" />
 			<int key="frame_start" value="1764" />
 			<int key="frame_end" value="2009" />
-			<date key="timestamp_start" value="2026-11-17T17:47:49.600000+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:48:06+00:00" />
+			<date key="timestamp_start" value="2026-11-17T19:14:43.600000+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:15:00+00:00" />
 			<float key="duration_seconds" value="16.4" />
 			<string key="source_segment_ids" value="22,23" />
 			<string key="source_activities" value="Opening the paper boat base | Flattening the boat shape" />
 			<int key="task_group_id" value="13" />
-			<string key="group_explanation" value="The same green paper is being opened into a boat shape in segment 22, and segment 23 continues by flattening that shape to finalize the base." />
+			<string key="group_explanation" value="Same green paper. Segment 22 opens the boat base, segment 23 flattens and presses it, completing the base formation." />
 			<string key="concept:name" value="Opening and flattening the paper boat base" />
-			<date key="time:timestamp" value="2026-11-17T17:47:49.600000+00:00" />
+			<date key="time:timestamp" value="2026-11-17T19:14:43.600000+00:00" />
 			<int key="@@index" value="12" />
 			<int key="@@case_index" value="0" />
 		</event>
 		<event>
 			<int key="videoID" value="2" />
-			<string key="activity" value="Folding top layer corners down" />
+			<string key="activity" value="Folding and creasing top layer corners" />
 			<int key="frame_start" value="2010" />
-			<int key="frame_end" value="2118" />
-			<date key="timestamp_start" value="2026-11-17T17:48:06+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:48:13.266667+00:00" />
-			<float key="duration_seconds" value="7.266666666666667" />
-			<string key="source_segment_ids" value="24" />
-			<string key="source_activities" value="Folding top layer corners down" />
+			<int key="frame_end" value="2210" />
+			<date key="timestamp_start" value="2026-11-17T19:15:00+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:15:13.400000+00:00" />
+			<float key="duration_seconds" value="13.4" />
+			<string key="source_segment_ids" value="24,25" />
+			<string key="source_activities" value="Folding top layer corners down | Creasing the corner folds" />
 			<int key="task_group_id" value="14" />
-			<string key="group_explanation" value="Original segment; no semantic merge confirmed" />
-			<string key="concept:name" value="Folding top layer corners down" />
-			<date key="time:timestamp" value="2026-11-17T17:48:06+00:00" />
+			<string key="group_explanation" value="The same green paper boat is being handled. Segment 24 shows the folding of the corners, and segment 25 shows the hands pressing and creasing those same folds to secure them. This is a direct continuation and refinement of the same folding task." />
+			<string key="concept:name" value="Folding and creasing top layer corners" />
+			<date key="time:timestamp" value="2026-11-17T19:15:00+00:00" />
 			<int key="@@index" value="13" />
 			<int key="@@case_index" value="0" />
 		</event>
 		<event>
 			<int key="videoID" value="2" />
-			<string key="activity" value="Creasing the corner folds" />
-			<int key="frame_start" value="2119" />
-			<int key="frame_end" value="2210" />
-			<date key="timestamp_start" value="2026-11-17T17:48:13.266667+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:48:19.400000+00:00" />
-			<float key="duration_seconds" value="6.133333333333334" />
-			<string key="source_segment_ids" value="25" />
-			<string key="source_activities" value="Creasing the corner folds" />
-			<int key="task_group_id" value="15" />
-			<string key="group_explanation" value="Original segment; no semantic merge confirmed" />
-			<string key="concept:name" value="Creasing the corner folds" />
-			<date key="time:timestamp" value="2026-11-17T17:48:13.266667+00:00" />
-			<int key="@@index" value="14" />
-			<int key="@@case_index" value="0" />
-		</event>
-		<event>
-			<int key="videoID" value="2" />
-			<string key="activity" value="Flipping and adjusting boat" />
+			<string key="activity" value="Flipping and final adjustments to paper boat" />
 			<int key="frame_start" value="2211" />
-			<int key="frame_end" value="2324" />
-			<date key="timestamp_start" value="2026-11-17T17:48:19.400000+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:48:27+00:00" />
-			<float key="duration_seconds" value="7.6" />
-			<string key="source_segment_ids" value="26" />
-			<string key="source_activities" value="Flipping and adjusting boat" />
-			<int key="task_group_id" value="16" />
-			<string key="group_explanation" value="Original segment; no semantic merge confirmed" />
-			<string key="concept:name" value="Flipping and adjusting boat" />
-			<date key="time:timestamp" value="2026-11-17T17:48:19.400000+00:00" />
-			<int key="@@index" value="15" />
-			<int key="@@case_index" value="0" />
-		</event>
-		<event>
-			<int key="videoID" value="2" />
-			<string key="activity" value="Final adjustments to paper boat" />
-			<int key="frame_start" value="2325" />
 			<int key="frame_end" value="2349" />
-			<date key="timestamp_start" value="2026-11-17T17:48:27+00:00" />
-			<date key="timestamp_end" value="2026-11-17T17:48:28.666667+00:00" />
-			<float key="duration_seconds" value="1.6666666666666667" />
-			<string key="source_segment_ids" value="27" />
-			<string key="source_activities" value="Final adjustments to paper boat" />
-			<int key="task_group_id" value="17" />
-			<string key="group_explanation" value="Original segment; no semantic merge confirmed" />
-			<string key="concept:name" value="Final adjustments to paper boat" />
-			<date key="time:timestamp" value="2026-11-17T17:48:27+00:00" />
-			<int key="@@index" value="16" />
+			<date key="timestamp_start" value="2026-11-17T19:15:13.400000+00:00" />
+			<date key="timestamp_end" value="2026-11-17T19:15:22.666667+00:00" />
+			<float key="duration_seconds" value="9.266666666666666" />
+			<string key="source_segment_ids" value="26,27" />
+			<string key="source_activities" value="Flipping and adjusting boat | Final adjustments to paper boat" />
+			<int key="task_group_id" value="15" />
+			<string key="group_explanation" value="The same green paper boat is being handled. Segment 26 shows flipping and initial adjustments, while segment 27 shows final fine-tuning of the shape. Both contribute to the same intermediate result of completing the boat's final form." />
+			<string key="concept:name" value="Flipping and final adjustments to paper boat" />
+			<date key="time:timestamp" value="2026-11-17T19:15:13.400000+00:00" />
+			<int key="@@index" value="14" />
 			<int key="@@case_index" value="0" />
 		</event>
 	</trace>
