@@ -134,8 +134,11 @@ def main():
         # Further description of the Python Wrapper: https://github.com/AraMambreyan/Improved-Dense-Trajectories/blob/master/README.md
         # run command to create IDT via docker
         os.chdir(targetIDT)
-        subprocess.run('docker build -t idt .')
-        subprocess.run('docker run -v ' + targetIDT + seperator + 'features:/densetrack/features idt')
+        image = 'idt-orig:latest'
+        features_mount = os.path.join(targetIDT, 'features') + ':/densetrack/features'
+
+        subprocess.run(['docker', 'build', '-t', image, '.'], check=True)
+        subprocess.run(['docker', 'run', '-v', features_mount, image], check=True)
 
         # Compute framewise FV for all the IDT-Features extracted
         # Dictionary,that includes all the computed FV
