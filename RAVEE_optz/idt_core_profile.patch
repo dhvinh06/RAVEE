@@ -1,0 +1,213 @@
+--- a/src/DenseTrackStab.cpp
++++ b/src/DenseTrackStab.cpp
+@@ -4,6 +4,7 @@
+ #include "OpticalFlow.h"
+ 
+ #include <time.h>
++#include <chrono>
+ 
+ #ifdef USE_PYTHON
+ #include <Python.h>
+@@ -15,6 +16,57 @@
+ #ifdef USE_SURF
+ using namespace cv::xfeatures2d;
+ #endif
++
++
++namespace {
++	using IdtProfileClock = std::chrono::steady_clock;
++
++	double idtSecondsSince(IdtProfileClock::time_point start) {
++		return std::chrono::duration<double>(IdtProfileClock::now() - start).count();
++	}
++
++	class IdtBlockTimer {
++	public:
++		explicit IdtBlockTimer(double* seconds) : seconds_(seconds) {
++			if (seconds_) start_ = IdtProfileClock::now();
++		}
++		~IdtBlockTimer() { stop(); }
++
++		void stop() {
++			if (seconds_) {
++				*seconds_ += idtSecondsSince(start_);
++				seconds_ = nullptr;
++			}
++		}
++
++	private:
++		double* seconds_;
++		IdtProfileClock::time_point start_;
++	};
++
++	struct IdtCoreProfile {
++		int frames = 0;
++		bool measuring = false;
++		double core = 0, surf = 0, camera_match_warp = 0;
++		double raw_flow = 0, warped_flow = 0, flow_state = 0;
++		double tracking = 0, descriptor_image = 0, descriptor_track = 0;
++
++		double* slot(double& seconds) const {
++			return measuring ? &seconds : nullptr;
++		}
++
++		void report(int levels, double packing) const {
++			fprintf(stderr, "IDT_CORE_PROFILE {\"frames\":%d,\"levels\":%d,"
++				"\"core_seconds\":%.9f,\"surf_seconds\":%.9f,"
++				"\"camera_match_warp_seconds\":%.9f,\"flow_raw_seconds\":%.9f,"
++				"\"flow_warped_seconds\":%.9f,\"flow_state_seconds\":%.9f,"
++				"\"tracking_seconds\":%.9f,\"descriptor_seconds\":%.9f,"
++				"\"numpy_packing_seconds\":%.9f}\n",
++				frames, levels, core, surf, camera_match_warp, raw_flow, warped_flow,
++				flow_state, tracking - descriptor_track, descriptor_image + descriptor_track, packing);
++		}
++	};
++}
+ 
+ int show_track = 0; // set show_track = 1, if you want to visualize the trajectories
+ 
+@@ -131,6 +183,7 @@
+ 		int min_distance, int patch_size, int nxy_cell, int nt_cell, 
+ 		int scale_num, int init_gap, int poly_n, double poly_sigma,
+ 		const char* image_pattern, bool adjust_camera, float scale_stride) {
++	IdtCoreProfile profile;
+ #ifdef USE_PYTHON
+ 	std::vector<ValidTrack> valid_tracks;
+ 
+@@ -270,6 +323,10 @@
+ 			continue;
+ 		}
+ 
++		// The runner loads 30 warm-up frames before the 400 measured frames.
++		profile.measuring = frame_num >= 30;
++		profile.frames += profile.measuring;
++		IdtBlockTimer frame_timer(profile.slot(profile.core));
+ 		init_counter++;
+ 		frame.copyTo(grey);
+ 		if (show_track == 1 || image_pattern != NULL)
+@@ -277,21 +334,27 @@
+ 
+ #ifdef USE_SURF
+ 		if (adjust_camera) {
++			IdtBlockTimer surf_timer(profile.slot(profile.surf));
+ 			// match surf features
+ 			if(bb_file)
+ 				InitMaskWithBox(human_mask, bb_list[frame_num].BBs);
+ 			detector_surf->detect(grey, kpts_surf, human_mask);
+ 			extractor_surf->compute(grey, kpts_surf, desc_surf);
++			surf_timer.stop();
++			IdtBlockTimer match_timer(profile.slot(profile.camera_match_warp));
+ 			ComputeMatch(prev_kpts_surf, kpts_surf, prev_desc_surf, desc_surf, prev_pts_surf, pts_surf);
+ 		}
+ #endif
+ 
++		IdtBlockTimer raw_flow_timer(profile.slot(profile.raw_flow));
+ 		// compute optical flow for all scales once
+ 		my::FarnebackPolyExpPyr(grey, poly_pyr, fscales, poly_n, poly_sigma);
+ 		my::calcOpticalFlowFarneback(prev_poly_pyr, poly_pyr, flow_pyr, 10, 2, scale_stride);
++		raw_flow_timer.stop();
+ 
+ #ifdef USE_SURF
+ 		if (adjust_camera) {
++			IdtBlockTimer camera_timer(profile.slot(profile.camera_match_warp));
+ 			MatchFromFlow(prev_grey, flow_pyr[0], prev_pts_flow, pts_flow, human_mask);
+ 			MergeMatch(prev_pts_flow, pts_flow, prev_pts_surf, pts_surf, prev_pts_all, pts_all);
+ 
+@@ -307,6 +370,8 @@
+ 			Mat grey_warp = Mat::zeros(grey.size(), CV_8UC1);
+ 			MyWarpPerspective(prev_grey, grey, grey_warp, H_inv); // warp the second frame
+ 
++			camera_timer.stop();
++			IdtBlockTimer warped_flow_timer(profile.slot(profile.warped_flow));
+ 			// compute optical flow for all scales once
+ 			my::FarnebackPolyExpPyr(grey_warp, poly_warp_pyr, fscales, poly_n, poly_sigma);
+ 			my::calcOpticalFlowFarneback(prev_poly_pyr, poly_warp_pyr, flow_warp_pyr, 10, 2, scale_stride);
+@@ -327,6 +392,7 @@
+ 			int width = grey_pyr[iScale].cols;
+ 			int height = grey_pyr[iScale].rows;
+ 
++			IdtBlockTimer hist_timer(profile.slot(profile.descriptor_image));
+ 			// compute the integral histograms
+ 			DescMat* hogMat = InitDescMat(height+1, width+1, hogInfo.nBins);
+ 			HogComp(prev_grey_pyr[iScale], hogMat->desc, hogInfo);
+@@ -338,6 +404,8 @@
+ 			DescMat* mbhMatY = InitDescMat(height+1, width+1, mbhInfo.nBins);
+ 			MbhComp(fp[iScale], mbhMatX->desc, mbhMatY->desc, mbhInfo);
+ 
++			hist_timer.stop();
++			IdtBlockTimer tracking_timer(profile.slot(profile.tracking));
+ 			// track feature points in each scale separately
+ 			std::list<Track>& tracks = xyScaleTracks[iScale];
+ 			for (std::list<Track>::iterator iTrack = tracks.begin(); iTrack != tracks.end();) {
+@@ -362,6 +430,7 @@
+ 				}
+ #endif
+ 
++				IdtBlockTimer desc_timer(profile.slot(profile.descriptor_track));
+ 				// get the descriptors for the feature point
+ 				RectInfo rect;
+ 				GetRect(prev_point, rect, width, height, hogInfo);
+@@ -369,6 +438,7 @@
+ 				GetDesc(hofMat, rect, hofInfo, iTrack->hof, index);
+ 				GetDesc(mbhMatX, rect, mbhInfo, iTrack->mbhX, index);
+ 				GetDesc(mbhMatY, rect, mbhInfo, iTrack->mbhY, index);
++				desc_timer.stop();
+ 				iTrack->addPoint(point);
+ 
+ 				// draw the trajectories at the first scale
+@@ -410,10 +480,12 @@
+ 						std::vector<float> hof;
+ 						std::vector<float> mbhX;
+ 						std::vector<float> mbhY;
++						IdtBlockTimer pooling_timer(profile.slot(profile.descriptor_track));
+ 						PrintDesc(iTrack->hog, hogInfo, trackInfo, hog);
+ 						PrintDesc(iTrack->hof, hofInfo, trackInfo, hof);
+ 						PrintDesc(iTrack->mbhX, mbhInfo, trackInfo, mbhX);
+ 						PrintDesc(iTrack->mbhY, mbhInfo, trackInfo, mbhY);
++						pooling_timer.stop();
+ 						valid_tracks.push_back(ValidTrack(frame_num, mean_x, mean_y,
+ 										var_x, var_y, length, fscales[iScale],
+ 										x_pos, y_pos, t_pos, trajectory_copy, trajectory,
+@@ -451,14 +523,18 @@
+ 				}
+ 				++iTrack;
+ 			}
++			tracking_timer.stop();
++			IdtBlockTimer release_timer(profile.slot(profile.descriptor_image));
+ 			ReleDescMat(hogMat);
+ 			ReleDescMat(hofMat);
+ 			ReleDescMat(mbhMatX);
+ 			ReleDescMat(mbhMatY);
++			release_timer.stop();
+ 
+ 			if(init_counter != trackInfo.gap)
+ 				continue;
+ 
++			IdtBlockTimer sampling_timer(profile.slot(profile.tracking));
+ 			// detect new feature points every gap frames
+ 			std::vector<Point2f> points(0);
+ 			for(std::list<Track>::iterator iTrack = tracks.begin(); iTrack != tracks.end(); iTrack++)
+@@ -479,6 +555,7 @@
+ 		grey.copyTo(prev_grey);
+ 		for(int i = 0; i < scale_num; i++) {
+ 			grey_pyr[i].copyTo(prev_grey_pyr[i]);
++			IdtBlockTimer flow_state_timer(profile.slot(profile.flow_state));
+ 			poly_pyr[i].copyTo(prev_poly_pyr[i]);
+ 		}
+ 
+@@ -523,6 +600,7 @@
+ #ifdef USE_PYTHON
+ 	Py_END_ALLOW_THREADS
+ 
++	const auto packing_start = IdtProfileClock::now();
+ 	int cell_size = nxy_cell * nxy_cell * nt_cell;
+ 	// PyList_Append increases the ref count (unlike PyList_SetItem)
+ 	// https://stackoverflow.com/questions/3512414/does-this-pylist-appendlist-py-buildvalue-leak
+@@ -573,6 +651,7 @@
+ 		std::swap(tmp, valid_tracks[i]);
+ 	}
+ 
++	profile.report(scale_num, idtSecondsSince(packing_start));
+ 	return (PyObject*) py_tracks;
+ #endif
+ }

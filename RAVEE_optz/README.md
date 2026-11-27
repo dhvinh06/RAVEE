@@ -106,6 +106,12 @@ existing granularity, labeling and semantic review GUIs open on the main thread.
 Docker must be installed/running if extraction is actually needed. Closing an idle
 selector exits; a running job must finish or fail before the window can close.
 
+New IDT extractions use six workers with equal frame ranges and a 30-frame
+overlap on each interior boundary. Set `RAVEE_IDT_WORKERS=1` to use sequential
+extraction. The worker count is part of the raw IDT cache identity. Explicit
+legacy trajectory adoption uses the sequential configuration when no worker
+override is set.
+
 ### CLI without the startup selector
 
 The original review/export workflow remains available explicitly:

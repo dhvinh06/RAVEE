@@ -339,13 +339,27 @@ class StageCache:
         return read(self.file(stage, inputs, 'arrays.npz', produce, read))
 
 
-def build_signature(idt_directory):
+CUDA_IDT_IMAGE = 'ravee-idt:cuda'
+CUDA_IDT_DOCKERFILE = 'Dockerfile.cuda'
+
+
+def idt_backend():
+    backend = os.environ.get('RAVEE_IDT_BACKEND', 'cpu').strip().lower()
+    if backend not in ('cpu', 'cuda'):
+        raise ValueError('RAVEE_IDT_BACKEND must be cpu or cuda')
+    return backend
+
+
+def build_signature(idt_directory, *, backend='cpu'):
     """Hash image sources, excluding mounted runtime data and generated files."""
     root = Path(idt_directory)
+    other_recipe = 'Dockerfile' if backend == 'cuda' else CUDA_IDT_DOCKERFILE
     files = []
     for path in sorted(root.rglob('*')):
         relative = path.relative_to(root)
-        if (any(part in {'.git', 'data', 'features', '__pycache__', 'build'}
+        if (relative.as_posix() == other_recipe
+                or (backend == 'cpu' and relative.parts[0] == 'cuda')
+                or any(part in {'.git', 'data', 'features', '__pycache__', 'build'}
                 for part in relative.parts) or path.suffix in {'.pyc', '.pyd', '.so'}):
             continue
         if path.is_file():
@@ -353,30 +367,74 @@ def build_signature(idt_directory):
     return fingerprint(files)
 
 
-def ensure_image(idt_directory, signature, rebuild=False):
-    image = f'ravee-idt:{signature[:20]}'
-    result = subprocess.run(
-        ['docker', 'image', 'inspect', '--format',
-         '{{index .Config.Labels "ravee.build"}}', image],
-        check=False, capture_output=True, text=True)
-    if rebuild or result.returncode != 0 or result.stdout.strip() != signature:
-        subprocess.run(['docker', 'build', '--label', f'ravee.build={signature}',
-                        '-t', image, '.'], cwd=str(idt_directory), check=True)
+def ensure_image(idt_directory, signature, rebuild=False, *, backend='cpu'):
+    cuda = backend == 'cuda'
+    image = CUDA_IDT_IMAGE if cuda else f'ravee-idt:{signature[:20]}'
+    fields = '{{index .Config.Labels "ravee.build"}}'
+    if cuda:
+        fields += ' {{.Id}}'
+    inspect_image = ['docker', 'image', 'inspect', '--format', fields, image]
+    result = subprocess.run(inspect_image, check=False, capture_output=True, text=True)
+    label, _, image_id = result.stdout.strip().partition(' ')
+    if rebuild or result.returncode != 0 or label != signature:
+        command = ['docker', 'build']
+        if cuda:
+            command.extend(['-f', CUDA_IDT_DOCKERFILE])
+        command.extend(['--label', f'ravee.build={signature}', '-t', image, '.'])
+        subprocess.run(command, cwd=str(idt_directory), check=True)
+        if cuda:
+            result = subprocess.run(inspect_image, check=True, capture_output=True, text=True)
+            label, _, image_id = result.stdout.strip().partition(' ')
+    if cuda:
+        if label != signature or not image_id:
+            raise RuntimeError('CUDA image tag no longer matches this IDT build. Retry extraction.')
+        # Pin the selected image for this run even if another build moves its tag.
+        return image_id
     return image
 
 
-def extract_idt(prepared, destination, image):
+DEFAULT_IDT_WORKERS = 6
+MAX_CUDA_IDT_WORKERS = 4
+
+
+def idt_worker_count(*, adopt_legacy=False, backend='cpu'):
+    default = 1 if adopt_legacy or backend == 'cuda' else DEFAULT_IDT_WORKERS
+    try:
+        workers = int(os.environ.get('RAVEE_IDT_WORKERS', default))
+    except ValueError:
+        raise ValueError('RAVEE_IDT_WORKERS must be an integer from 1 to 6') from None
+    if not 1 <= workers <= 6:
+        raise ValueError('RAVEE_IDT_WORKERS must be an integer from 1 to 6')
+    if backend == 'cuda' and workers > MAX_CUDA_IDT_WORKERS:
+        raise ValueError('RAVEE_IDT_BACKEND=cuda requires RAVEE_IDT_WORKERS from 1 to 4')
+    return workers
+
+
+def extract_idt(prepared, destination, image, *, workers=None, container_log=None,
+                backend='cpu', run_container=None):
     """Mount only this job's input; baked-in or old data cannot enter the run."""
+    cuda = backend == 'cuda'
+    if workers is None:
+        workers = 1 if cuda else DEFAULT_IDT_WORKERS
+    if cuda and not 1 <= workers <= MAX_CUDA_IDT_WORKERS:
+        raise ValueError('RAVEE_IDT_BACKEND=cuda requires RAVEE_IDT_WORKERS from 1 to 4')
+    command = ['docker', 'run', '--rm', '-e', 'RAVEE_RAW_ONLY=1',
+               '-e', f'RAVEE_IDT_WORKERS={workers}']
+    if cuda:
+        command.extend(['--gpus', 'all', '-e', 'RAVEE_IDT_BACKEND=cuda'])
+    if workers > 1 or cuda:
+        command.extend(['--memory=6g', '--memory-swap=6g'])
     with tempfile.TemporaryDirectory(prefix='idt-input-', dir=destination.parent) as work:
         data = Path(work) / 'data'
         data.mkdir()
         shutil.copy2(prepared, data / prepared.name)
         output = Path(work) / 'features'
         output.mkdir()
-        subprocess.run(
-            ['docker', 'run', '--rm', '-e', 'RAVEE_RAW_ONLY=1',
-             '-v', f'{data.resolve()}:/densetrack/data:ro',
-             '-v', f'{output.resolve()}:/densetrack/features', image], check=True)
+        command.extend(['-v', f'{data.resolve()}:/densetrack/data:ro',
+                        '-v', f'{output.resolve()}:/densetrack/features', image])
+        runner = subprocess.run if run_container is None else run_container
+        runner(command, check=True, stdout=container_log,
+               stderr=subprocess.STDOUT if container_log is not None else None)
         shutil.copy2(output / f'{prepared.stem}-trajectory.npy', destination)
 
 
@@ -415,9 +473,14 @@ def preprocessing_inputs(project, source, case_id, settings):
             'versions': {'opencv': cv2.__version__}}
 
 
-def idt_inputs_for(prepared, source_hash, signature):
-    return {'video': digest_file(prepared), 'source': source_hash,
-            'image_sources': signature, 'mode': 'raw', 'adjust_camera': True}
+def idt_inputs_for(prepared, source_hash, signature, *, workers=1, backend='cpu'):
+    inputs = {'video': digest_file(prepared), 'source': source_hash,
+              'image_sources': signature, 'mode': 'raw', 'adjust_camera': True}
+    if workers > 1:
+        inputs['workers'] = workers
+    if backend == 'cuda':
+        inputs['backend'] = backend
+    return inputs
 
 
 def fv_inputs_for(project, raw):
@@ -451,12 +514,15 @@ def inspect_video_cache(project, cache_directory, source, settings, required=Non
     stages = {name: False for name in ('preprocessing', 'idt', 'fisher_vectors', 'finch')}
     error = None
     try:
+        backend = idt_backend()
         pre = preprocessing_inputs(project, source, case_id, settings)
         prepared = cache.lookup_preprocessing(project, pre)
         if prepared is not None:
             validate_preprocessed(prepared, video_info(source), settings)
             stages['preprocessing'] = True
-            raw_inputs = idt_inputs_for(prepared, pre['sha256'], build_signature(project / 'IDT'))
+            signature = build_signature(project / 'IDT', backend=backend)
+            raw_inputs = idt_inputs_for(prepared, pre['sha256'], signature,
+                                        workers=idt_worker_count(backend=backend), backend=backend)
             raw = cache.lookup('idt', raw_inputs, f'{prepared.stem}-trajectory.npy')
             if raw is not None:
                 validate_tracks(raw, int(video_info(prepared)['frames']))
@@ -492,7 +558,9 @@ def prepare_features(project, cache_directory, reduce_video_size, settings,
     sources = source_cases(project, videos)
     report = progress or (lambda message: None)
     tables = descriptor_tables(idt / 'features')
-    signature = build_signature(idt)
+    backend = idt_backend()
+    signature = build_signature(idt, backend=backend)
+    workers = idt_worker_count(adopt_legacy=adopt_idt, backend=backend)
     image = None
     results = {}
     for case_id, source in sources:
@@ -535,12 +603,12 @@ def prepare_features(project, cache_directory, reduce_video_size, settings,
             print(f'Cache hit: preprocessing: {prepared.name}')
         report(f'Preprocessing ready: {source.name}')
         frame_count = int(video_info(prepared)['frames'])
-        idt_inputs = idt_inputs_for(prepared, source_hash, signature)
+        idt_inputs = idt_inputs_for(prepared, source_hash, signature, workers=workers, backend=backend)
 
         def trajectories(destination):
             nonlocal image
             legacy = idt / 'features' / f'{prepared.stem}-trajectory.npy'
-            if adopt_idt and legacy.is_file():
+            if backend == 'cpu' and workers == 1 and adopt_idt and legacy.is_file():
                 if legacy.stat().st_mtime_ns < source.stat().st_mtime_ns:
                     raise ValueError(f'Legacy trajectories predate input: {legacy}')
                 shutil.copy2(legacy, destination)
@@ -548,17 +616,30 @@ def prepare_features(project, cache_directory, reduce_video_size, settings,
             channels = [channel.upper() for channel, rows in tables.items()
                         if prepared.stem in rows]
             if not allow_idt:
+                if backend == 'cuda':
+                    raise CacheMiss(f'No completed CUDA IDT cache for {source.name}. '
+                                    'Use --allow-idt to extract it.')
+                diagnostic = (f'Existing video-level CSV descriptors: {channels or "none"}. '
+                              'These vectors have no frame indices and cannot feed temporal FINCH.')
+                if workers > 1:
+                    raise CacheMiss(f'No completed IDT cache for {source.name} with '
+                                    f'{workers} workers. {diagnostic} '
+                                    'Use --allow-idt to extract it.')
                 raise CacheMiss(
                     f'No completed raw IDT cache for {source.name}. '
-                    f'Existing video-level CSV descriptors: {channels or "none"}. '
-                    'These vectors have no frame indices and cannot feed temporal FINCH. '
+                    f'{diagnostic} '
                     'Resume verified raw .npy output with --adopt-existing-idt, or explicitly '
                     'allow the missing extraction with --allow-idt. Existing CSVs are preserved.')
             if image is None:
                 report('Preparing Docker image for missing IDT extraction')
-                image = ensure_image(idt, signature, rebuild)
+                image = ensure_image(idt, signature, rebuild, backend=backend)
             report(f'Extracting IDT trajectories: {source.name}')
-            extract_idt(prepared, destination, image)
+            if workers == DEFAULT_IDT_WORKERS:
+                extract_idt(prepared, destination, image)
+            elif backend == 'cpu':
+                extract_idt(prepared, destination, image, workers=workers)
+            else:
+                extract_idt(prepared, destination, image, workers=workers, backend=backend)
 
         report(f'Verifying IDT cache: {source.name}')
         raw = cache.file('idt', idt_inputs, f'{prepared.stem}-trajectory.npy', trajectories,
