@@ -1,0 +1,137 @@
+FROM nvidia/cuda:11.8.0-devel-ubuntu20.04
+
+ARG DEBIAN_FRONTEND=noninteractive
+ARG OPENCV_BUILD_JOBS=2
+ARG IDT_CPU_FLAGS="-mavx2 -mfma -ffp-contract=off"
+
+# The base already contains the CUDA toolkit. Only Ubuntu packages are needed here.
+RUN rm -f /etc/apt/sources.list.d/cuda*.list /etc/apt/sources.list.d/nvidia*.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential ca-certificates cmake curl pkg-config \
+        python3-dev python3-pip python3-setuptools python3-wheel \
+        libavcodec-dev libavformat-dev libavutil-dev libswscale-dev \
+        libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+        gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
+        libgtk2.0-dev libjpeg-dev libpng-dev libtiff-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && python3 -m pip install --no-cache-dir --only-binary=:all: \
+        numpy==1.21.0 scipy==1.10.1 pandas==1.5.3 scikit-learn==1.3.2
+
+RUN --mount=type=cache,target=/tmp/opencv-cache <<'BUILD_OPENCV'
+set -eu
+cd /tmp
+for repo in opencv opencv_contrib; do
+    curl -fsSL --retry 5 "https://codeload.github.com/opencv/${repo}/tar.gz/refs/tags/3.4.12" -o "${repo}.tar.gz"
+    tar -xzf "${repo}.tar.gz"
+    rm "${repo}.tar.gz"
+done
+
+# CUDA 11 dropped nppicom. Apply the CMake compatibility fix if absent.
+cuda_cmake=/tmp/opencv-3.4.12/cmake/OpenCVDetectCUDA.cmake
+if ! grep -q 'nppicom' "$cuda_cmake"; then
+    grep -Eq '^[[:space:]]*set\(HAVE_CUDA 1\)' "$cuda_cmake"
+    sed -i '/^[[:space:]]*set(HAVE_CUDA 1)/a\  list(FILTER CUDA_nppi_LIBRARY EXCLUDE REGEX "nppicom")\n  list(FILTER CUDA_npp_LIBRARY EXCLUDE REGEX "nppicom")' "$cuda_cmake"
+fi
+
+cmake -S /tmp/opencv-3.4.12 -B /tmp/opencv-build \
+    -D CMAKE_BUILD_TYPE=Release \
+    -D CMAKE_INSTALL_PREFIX=/usr/local \
+    -D OPENCV_EXTRA_MODULES_PATH=/tmp/opencv_contrib-3.4.12/modules \
+    -D OPENCV_DOWNLOAD_PATH=/tmp/opencv-cache \
+    -D OPENCV_ENABLE_NONFREE=ON \
+    -D BUILD_LIST=calib3d,features2d,flann,highgui,imgcodecs,video,videoio,xfeatures2d,python3,cudev,cudaarithm,cudaoptflow,cudawarping,cudaimgproc,cudafilters,cudafeatures2d \
+    -D BUILD_opencv_python2=OFF -D BUILD_opencv_python3=ON \
+    -D PYTHON3_EXECUTABLE=/usr/bin/python3 \
+    -D BUILD_TESTS=OFF -D BUILD_PERF_TESTS=OFF -D BUILD_EXAMPLES=OFF -D BUILD_DOCS=OFF \
+    -D WITH_CUDA=ON -D CUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda \
+    -D CUDA_ARCH_BIN=7.5 -D CUDA_ARCH_PTX="" \
+    -D BUILD_opencv_cudacodec=OFF -D WITH_NVCUVID=OFF \
+    -D WITH_OPENCL=OFF -D WITH_FFMPEG=ON -D WITH_GSTREAMER=ON \
+    -D CMAKE_CXX_FLAGS="-O3 -mavx2 -mfma -funsafe-math-optimizations" \
+    -D CMAKE_C_FLAGS="-O3 -funsafe-math-optimizations"
+
+grep -q '^#define HAVE_CUDA' /tmp/opencv-build/cvconfig.h
+# OpenCV 3.4's Python generator emits FlannBasedMatcher wrappers for features2d.
+if ! grep -Eq '^#define[[:space:]]+HAVE_OPENCV_FLANN([[:space:]]|$)' /tmp/opencv-build/opencv2/opencv_modules.hpp; then
+    echo 'OpenCV FLANN must be enabled to compile the Python bindings.' >&2
+    exit 1
+fi
+cmake --build /tmp/opencv-build --parallel "$OPENCV_BUILD_JOBS"
+cmake --install /tmp/opencv-build
+ldconfig
+rm -rf /tmp/opencv-build /tmp/opencv-3.4.12 /tmp/opencv_contrib-3.4.12
+BUILD_OPENCV
+
+# Build the same IDT entry point and check dynamic linking without a GPU at build time.
+WORKDIR /densetrack
+COPY setup.py run_idt.py ./
+COPY src/ ./src/
+COPY cuda/ ./cuda/
+# The legacy opencv/cv.h umbrella includes modules omitted from this image.
+RUN sed -i 's/\r$//' src/DenseTrackStab.cpp setup.py \
+    && patch --batch --forward -p1 -i cuda/idt_cuda.patch \
+    && nvcc -O3 -gencode arch=compute_75,code=sm_75 -Xcompiler=-fPIC \
+        -c cuda/FlowKernels.cu -o cuda/FlowKernels.o \
+    && sed -i \
+        -e 's|^#include <opencv/cv\.h>[[:space:]]*$|#include <opencv2/imgproc/types_c.h>|' \
+        -e 's|^#include <opencv/highgui\.h>[[:space:]]*$|#include <opencv2/highgui/highgui_c.h>\n#include <opencv2/imgcodecs.hpp>\n#include <opencv2/videoio.hpp>|' \
+        -e 's|^#include <opencv/cxcore\.h>[[:space:]]*$|#include <opencv2/core/core_c.h>\n#include <climits>\n#include <sys/stat.h>|' \
+        src/DenseTrackStab.h \
+    && IDT_CPU_FLAGS="$IDT_CPU_FLAGS" python3 setup.py build_ext --inplace \
+    && python3 -c 'import cv2, densetrack; assert cv2.__version__ == "3.4.12", cv2.__version__' \
+    && rm -rf build && rm cuda/FlowKernels.o \
+    && mkdir -p data features
+
+# Run explicitly with --gpus all and --entrypoint idt-cuda-smoke.
+COPY <<'CUDA_SMOKE' /tmp/idt-cuda-smoke.cpp
+#include <iostream>
+#include <opencv2/core/cuda.hpp>
+#include <opencv2/core/version.hpp>
+#include <opencv2/cudaoptflow.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/video/tracking.hpp>
+#include <opencv2/xfeatures2d.hpp>
+
+int main() {
+    if (cv::cuda::getCudaEnabledDeviceCount() < 1) {
+        std::cerr << "OpenCV cannot see a CUDA device\n";
+        return 1;
+    }
+    cv::cuda::setDevice(0);
+    cv::cuda::DeviceInfo gpu(0);
+    if (gpu.majorVersion() != 7 || gpu.minorVersion() != 5 || !gpu.isCompatible()) {
+        std::cerr << "Expected a compatible sm_75 CUDA device, found " << gpu.name() << '\n';
+        return 1;
+    }
+
+    cv::Mat prev(96, 96, CV_8UC1), curr;
+    cv::randu(prev, 0, 255);
+    cv::Mat translate = (cv::Mat_<double>(2, 3) << 1, 0, 2, 0, 1, 0);
+    cv::warpAffine(prev, curr, translate, prev.size());
+    cv::cuda::GpuMat prev_gpu, curr_gpu, flow_gpu;
+    prev_gpu.upload(prev);
+    curr_gpu.upload(curr);
+    auto farneback = cv::cuda::FarnebackOpticalFlow::create(
+        2, 0.5, false, 13, 2, 7, 1.5, cv::OPTFLOW_FARNEBACK_GAUSSIAN);
+    farneback->calc(prev_gpu, curr_gpu, flow_gpu);
+    cv::Mat flow;
+    flow_gpu.download(flow);
+    if (flow.type() != CV_32FC2 || flow.size() != prev.size() || !cv::checkRange(flow)) {
+        std::cerr << "Farneback CUDA produced an invalid flow image\n";
+        return 1;
+    }
+    if (cv::mean(flow(cv::Rect(24, 24, 48, 48)))[0] < 1.0) {
+        std::cerr << "Farneback CUDA missed the synthetic horizontal translation\n";
+        return 1;
+    }
+    cv::xfeatures2d::SURF::create(200);
+    std::cout << "PASS OpenCV " << CV_VERSION << ", Farneback CUDA and CPU SURF, " << gpu.name() << '\n';
+}
+CUDA_SMOKE
+RUN g++ -O3 -mavx2 -mfma /tmp/idt-cuda-smoke.cpp -o /usr/local/bin/idt-cuda-smoke \
+        -lopencv_cudaoptflow -lopencv_xfeatures2d -lopencv_imgproc -lopencv_core \
+    && rm /tmp/idt-cuda-smoke.cpp
+
+ENV TMPDIR=/tmp RAVEE_IDT_WORKERS=1 RAVEE_IDT_BACKEND=cuda
+ENTRYPOINT ["python3", "-u", "run_idt.py"]

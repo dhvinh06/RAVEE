@@ -1,0 +1,244 @@
+--- a/src/DenseTrackStab.cpp
++++ b/src/DenseTrackStab.cpp
+@@ -2,6 +2,10 @@
+ #include "Initialize.h"
+ #include "Descriptors.h"
+ #include "OpticalFlow.h"
++#ifdef RAVEE_USE_CUDA
++#include "../cuda/FarnebackCuda.h"
++#include <memory>
++#endif
+ 
+ #include <time.h>
+ 
+@@ -138,6 +142,9 @@
+ 	// https://docs.python.org/3/c-api/init.html#releasing-the-gil-from-extension-code
+ 	// Variables may need to be declared outside that block.
+ 	Py_BEGIN_ALLOW_THREADS
++#ifdef RAVEE_USE_CUDA
++	try {
++#endif
+ #endif
+ 
+ 	TrackInfo trackInfo;
+@@ -189,6 +196,9 @@
+ 	std::vector<Mat> prev_grey_pyr(0), grey_pyr(0), flow_pyr(0), flow_warp_pyr(0);
+ 	std::vector<Mat> prev_poly_pyr(0), poly_pyr(0), poly_warp_pyr(0);
+ 
++#ifdef RAVEE_USE_CUDA
++	std::unique_ptr<ravee::CudaFarneback> cuda_flow;
++#endif
+ 	std::vector<std::list<Track> > xyScaleTracks;
+ 	int init_counter = 0; // indicate when to detect new feature points
+ #ifdef USE_PYTHON
+@@ -212,17 +222,28 @@
+ 			// for (size_t i = 0; i < prev_grey_pyr.size(); i++)
+ 			// 	fprintf(stderr, "prev_grey %lu: %d x %d\n", i, prev_grey_pyr[i].cols, prev_grey_pyr[i].rows);
+ 			BuildPry(sizes, CV_8UC1, grey_pyr);
+-			BuildPry(sizes, CV_32FC2, flow_pyr);
+-
+-			BuildPry(sizes, CV_32FC(5), prev_poly_pyr);
+-			BuildPry(sizes, CV_32FC(5), poly_pyr);
+-
+-#ifdef USE_SURF
+-			if (adjust_camera) {
+-				BuildPry(sizes, CV_32FC2, flow_warp_pyr);
+-				BuildPry(sizes, CV_32FC(5), poly_warp_pyr);
+-			}
+-#endif
++#ifdef RAVEE_USE_CUDA
++			if (ravee::useCudaFlow()) {
++				ravee::initializeCudaFlow();
++				flow_pyr.resize(sizes.size());
++				if (adjust_camera) flow_warp_pyr.resize(sizes.size());
++				cuda_flow.reset(new ravee::CudaFarneback(sizes, fscales, poly_n, poly_sigma,
++					scale_stride, flow_pyr, flow_warp_pyr));
++			} else
++#endif
++			{
++				BuildPry(sizes, CV_32FC2, flow_pyr);
++
++				BuildPry(sizes, CV_32FC(5), prev_poly_pyr);
++				BuildPry(sizes, CV_32FC(5), poly_pyr);
++
++#ifdef USE_SURF
++				if (adjust_camera) {
++					BuildPry(sizes, CV_32FC2, flow_warp_pyr);
++					BuildPry(sizes, CV_32FC(5), poly_warp_pyr);
++				}
++#endif
++			}
+ 
+ 			xyScaleTracks.resize(scale_num);
+ 
+@@ -253,8 +274,14 @@
+ 				}
+ 			}
+ 
+-			// compute polynomial expansion
+-			my::FarnebackPolyExpPyr(prev_grey, prev_poly_pyr, fscales, poly_n, poly_sigma);
++#ifdef RAVEE_USE_CUDA
++			if (cuda_flow) {
++				cuda_flow->seed(prev_grey);
++			} else
++#endif
++			{
++				my::FarnebackPolyExpPyr(prev_grey, prev_poly_pyr, fscales, poly_n, poly_sigma);
++			}
+ 
+ #ifdef USE_SURF
+ 			if (adjust_camera) {
+@@ -270,13 +297,27 @@
+ 			continue;
+ 		}
+ 
++#ifdef RAVEE_USE_CUDA
++		using Profile = ravee::CudaFlowProfile;
++		auto* cuda_profile = cuda_flow ? cuda_flow->profiler() : nullptr;
++		if (cuda_profile) cuda_profile->frame(frame_num);
++		Profile::HostSpan frame_timer(cuda_profile, Profile::Host::Frame);
++#endif
+ 		init_counter++;
+ 		frame.copyTo(grey);
+ 		if (show_track == 1 || image_pattern != NULL)
+ 			cvtColor(frame, image, CV_GRAY2BGR);
+ 
++#ifdef RAVEE_USE_CUDA
++		// Submit the raw flow ahead of CPU SURF and matching.
++		if (cuda_flow) cuda_flow->beginFrame(grey);
++#endif
++
+ #ifdef USE_SURF
+ 		if (adjust_camera) {
++#ifdef RAVEE_USE_CUDA
++			Profile::HostSpan surf_timer(cuda_profile, Profile::Host::Surf);
++#endif
+ 			// match surf features
+ 			if(bb_file)
+ 				InitMaskWithBox(human_mask, bb_list[frame_num].BBs);
+@@ -286,12 +327,22 @@
+ 		}
+ #endif
+ 
+-		// compute optical flow for all scales once
+-		my::FarnebackPolyExpPyr(grey, poly_pyr, fscales, poly_n, poly_sigma);
+-		my::calcOpticalFlowFarneback(prev_poly_pyr, poly_pyr, flow_pyr, 10, 2, scale_stride);
++#ifdef RAVEE_USE_CUDA
++		if (cuda_flow) {
++			cuda_flow->wait();
++		} else
++#endif
++		{
++			// compute optical flow for all scales once
++			my::FarnebackPolyExpPyr(grey, poly_pyr, fscales, poly_n, poly_sigma);
++			my::calcOpticalFlowFarneback(prev_poly_pyr, poly_pyr, flow_pyr, 10, 2, scale_stride);
++		}
+ 
+ #ifdef USE_SURF
+ 		if (adjust_camera) {
++#ifdef RAVEE_USE_CUDA
++			Profile::HostSpan homography_timer(cuda_profile, Profile::Host::Homography);
++#endif
+ 			MatchFromFlow(prev_grey, flow_pyr[0], prev_pts_flow, pts_flow, human_mask);
+ 			MergeMatch(prev_pts_flow, pts_flow, prev_pts_surf, pts_surf, prev_pts_all, pts_all);
+ 
+@@ -303,13 +354,22 @@
+ 					H = temp;
+ 			}
+ 
+-			Mat H_inv = H.inv();
+-			Mat grey_warp = Mat::zeros(grey.size(), CV_8UC1);
+-			MyWarpPerspective(prev_grey, grey, grey_warp, H_inv); // warp the second frame
+-
+-			// compute optical flow for all scales once
+-			my::FarnebackPolyExpPyr(grey_warp, poly_warp_pyr, fscales, poly_n, poly_sigma);
+-			my::calcOpticalFlowFarneback(prev_poly_pyr, poly_warp_pyr, flow_warp_pyr, 10, 2, scale_stride);
++#ifdef RAVEE_USE_CUDA
++			homography_timer.stop();
++			if (cuda_flow) {
++				cuda_flow->compensateCamera(H);
++				cuda_flow->wait(true);
++			} else
++#endif
++			{
++				Mat H_inv = H.inv();
++				Mat grey_warp = Mat::zeros(grey.size(), CV_8UC1);
++				MyWarpPerspective(prev_grey, grey, grey_warp, H_inv); // warp the second frame
++
++				// compute optical flow for all scales once
++				my::FarnebackPolyExpPyr(grey_warp, poly_warp_pyr, fscales, poly_n, poly_sigma);
++				my::calcOpticalFlowFarneback(prev_poly_pyr, poly_warp_pyr, flow_warp_pyr, 10, 2, scale_stride);
++			}
+ 		}
+ #endif
+ 
+@@ -327,6 +387,9 @@
+ 			int width = grey_pyr[iScale].cols;
+ 			int height = grey_pyr[iScale].rows;
+ 
++#ifdef RAVEE_USE_CUDA
++			Profile::HostSpan histograms_timer(cuda_profile, Profile::Host::Histograms);
++#endif
+ 			// compute the integral histograms
+ 			DescMat* hogMat = InitDescMat(height+1, width+1, hogInfo.nBins);
+ 			HogComp(prev_grey_pyr[iScale], hogMat->desc, hogInfo);
+@@ -338,6 +401,10 @@
+ 			DescMat* mbhMatY = InitDescMat(height+1, width+1, mbhInfo.nBins);
+ 			MbhComp(fp[iScale], mbhMatX->desc, mbhMatY->desc, mbhInfo);
+ 
++#ifdef RAVEE_USE_CUDA
++			histograms_timer.stop();
++			Profile::HostSpan tracking_timer(cuda_profile, Profile::Host::TrackingAndDescriptors);
++#endif
+ 			// track feature points in each scale separately
+ 			std::list<Track>& tracks = xyScaleTracks[iScale];
+ 			for (std::list<Track>::iterator iTrack = tracks.begin(); iTrack != tracks.end();) {
+@@ -479,8 +546,14 @@
+ 		grey.copyTo(prev_grey);
+ 		for(int i = 0; i < scale_num; i++) {
+ 			grey_pyr[i].copyTo(prev_grey_pyr[i]);
+-			poly_pyr[i].copyTo(prev_poly_pyr[i]);
+-		}
++#ifdef RAVEE_USE_CUDA
++			if (!cuda_flow)
++#endif
++				poly_pyr[i].copyTo(prev_poly_pyr[i]);
++		}
++#ifdef RAVEE_USE_CUDA
++		if (cuda_flow) cuda_flow->advance();
++#endif
+ 
+ #ifdef USE_SURF
+ 		if (adjust_camera) {
+@@ -521,6 +594,14 @@
+ 		destroyWindow("DenseTrackStab");
+ 
+ #ifdef USE_PYTHON
++#ifdef RAVEE_USE_CUDA
++		if (cuda_flow) cuda_flow->report();
++	} catch (const std::exception& error) {
++		Py_BLOCK_THREADS
++		PyErr_SetString(PyExc_RuntimeError, error.what());
++		return NULL;
++	}
++#endif
+ 	Py_END_ALLOW_THREADS
+ 
+ 	int cell_size = nxy_cell * nxy_cell * nt_cell;
+--- a/setup.py
++++ b/setup.py
+@@ -46,7 +46,14 @@
+     macros.append(('USE_SURF', None))
+     libs.append('opencv_xfeatures2d')
+ 
++include_dirs.append('/usr/local/cuda/include')
++library_dirs.append('/usr/local/cuda/lib64')
++macros.append(('RAVEE_USE_CUDA', None))
++libs.extend(('opencv_cudaoptflow', 'opencv_cudawarping', 'opencv_cudafilters',
++             'opencv_cudaarithm', 'cudart'))
++
+ densetrack = Extension('densetrack', ['src/DenseTrackStab.cpp'],
++                       extra_objects=['cuda/FlowKernels.o'],
+                        include_dirs=include_dirs,
+                        library_dirs=library_dirs,
+                        extra_compile_args=extra_compile_args,

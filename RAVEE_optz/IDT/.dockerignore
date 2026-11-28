@@ -1,0 +1,9 @@
+.git
+data
+features
+__pycache__
+**/__pycache__
+*.pyc
+*.pyd
+*.so
+build
