@@ -14,7 +14,7 @@ class IDTCUDABackendTests(unittest.TestCase):
             self.assertEqual(cache.idt_backend(), 'cpu')
             self.assertEqual(cache.idt_worker_count(adopt_legacy=True), 1)
             self.assertEqual(cache.idt_worker_count(backend='cuda'), 1)
-        for backend, workers in [('cpu', 6), ('cuda', 1), ('cuda', 4)]:
+        for backend, workers in [('cpu', 6), ('cuda', 1), ('cuda', 4), ('cuda', 6)]:
             with self.subTest(backend=backend, workers=workers), patch.dict(os.environ, {
                 'RAVEE_IDT_BACKEND': backend, 'RAVEE_IDT_WORKERS': str(workers),
             }), tempfile.TemporaryDirectory() as directory:
@@ -28,7 +28,12 @@ class IDTCUDABackendTests(unittest.TestCase):
 
                 with patch.object(cache.subprocess, 'run', side_effect=docker) as run:
                     selected = cache.idt_backend()
-                    count = cache.idt_worker_count(backend=selected)
+                    if (selected, workers) == ('cuda', 6):
+                        with self.assertRaisesRegex(ValueError, '1 to 4'):
+                            cache.idt_worker_count(backend=selected)
+                        count = workers  # Explicit benchmark request.
+                    else:
+                        count = cache.idt_worker_count(backend=selected)
                     cache.extract_idt(prepared, root / 'output.npy', 'image',
                                       backend=selected, workers=count)
                 argv = run.call_args.args[0]
@@ -36,6 +41,7 @@ class IDTCUDABackendTests(unittest.TestCase):
                 if backend == 'cuda':
                     self.assertEqual(argv[argv.index('--gpus') + 1], 'all')
                     self.assertIn('RAVEE_IDT_BACKEND=cuda', argv)
+                    self.assertIn('--memory=6g', argv)
                 else:
                     self.assertNotIn('--gpus', argv)
         with patch.dict(os.environ, {'RAVEE_IDT_BACKEND': 'cuda', 'RAVEE_IDT_WORKERS': '5'}):

@@ -29,6 +29,9 @@ METRICS = ('raw_ari', 'oracle_ari', 'oracle_accuracy')
 SEEDS = tuple(range(10))
 VRAM_LIMIT_MIB = 3584
 RAM_LIMIT_BYTES = int(6.5 * 1024**3)
+ACCEPTANCE_DIR = PROJECT / 'temp' / 'idt_cuda_acceptance'
+W6_TRIAL_DIR = PROJECT / 'temp' / 'idt_cuda_w6_trial'
+TRIAL_WORKERS = 6
 
 for variable in ('OMP_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS'):
     os.environ[variable] = '1'
@@ -226,6 +229,19 @@ def sweep(videos, image, output, report):
     return report['best_runs']
 
 
+def trial_w6(videos, image, output, report, reference):
+    runs = report['trial_runs'] = {}
+    for scene in ('scene02', 'scene01'):
+        trial = runs[scene] = run_trial(videos[scene], image, TRIAL_WORKERS, output / f'{scene}-w6')
+        write_json(output / 'acceptance.json', report)
+        old_seconds = reference[scene]['wall_seconds']
+        if scene == 'scene02' and (not within_resources(trial) or trial['wall_seconds'] >= old_seconds):
+            report['scene01_skipped'] = 'Scene 02 must beat CUDA W=4 within the resource limits.'
+            print(report['scene01_skipped'], flush=True)
+            break
+    return runs
+
+
 def legacy_acceptance():
     if str(BASELINE) not in sys.path:
         sys.path.insert(0, str(BASELINE))
@@ -238,13 +254,14 @@ def check_trajectories(runs, references, *, max_track_pct, max_l2_pct):
 
     prior = legacy_acceptance()
     rows = {}
-    for scene, (end, _) in SCENES.items():
-        if runs[scene]['status'] != 'complete':
+    for scene, trial in runs.items():
+        if trial['status'] != 'complete':
             continue
+        end = SCENES[scene][0]
         reference, cpu = references[scene]
         observed, _ = prior.inspect(reference, cpu, None, end + 1)
-        _, row = prior.inspect(Path(runs[scene]['trajectory']), runs[scene], observed, end + 1)
-        actual = np.load(runs[scene]['trajectory'], mmap_mode='r', allow_pickle=False)
+        _, row = prior.inspect(Path(trial['trajectory']), trial, observed, end + 1)
+        actual = np.load(trial['trajectory'], mmap_mode='r', allow_pickle=False)
         row['cuda_track_count'] = len(actual)
         row['cpu_track_count'] = observed[2]
         row['format_pass'] = (row['dtype_equal'] and row['ordered'] and row['frame_ends'] == [15, end]
@@ -274,16 +291,19 @@ def evaluate_seed_scene(seed, scene, trajectory, output):
     return scene, seed
 
 
-def check_quality(runs, output, cpu_scores, scorer_path, dataset, jobs):
+def check_quality(runs, output, cpu_scores, scorer_path, dataset, jobs, *, w4_quality=()):
     spec = importlib.util.spec_from_file_location('phase3_oracle_scoring', scorer_path)
     scorer = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(scorer)
     prior = legacy_acceptance()
+    scenes = tuple(scene for scene in SCENES if scene in runs)
+    scopes = SCOPES if len(scenes) == len(SCENES) else scenes
+    w4_scores = {(row['scope'], row['metric']): row['cuda_mean'] for row in w4_quality}
     identity = cache.fingerprint({scene: row['trajectory_sha256'] for scene, row in runs.items()})[:16]
     output = output / f'quality-{identity}'
     output.mkdir(exist_ok=True)
     with ProcessPoolExecutor(max_workers=jobs) as pool:
-        for scene in SCENES:
+        for scene in scenes:
             tasks = [(seed, scene, Path(runs[scene]['trajectory']), output / f'seed-{seed}' / scene)
                      for seed in SEEDS]
             pending = [pool.submit(evaluate_seed_scene, *task) for task in tasks
@@ -293,18 +313,22 @@ def check_quality(runs, output, cpu_scores, scorer_path, dataset, jobs):
             for task in pending:
                 complete_scene, seed = task.result()
                 print(f'{complete_scene} | seed {seed} complete', flush=True)
-    cuda_scores = {seed: scorer.score_run(output / f'seed-{seed}', SCENES, dataset, prior.load_seconds)
+    cuda_scores = {seed: scorer.score_run(output / f'seed-{seed}', scenes, dataset, prior.load_seconds)
                    for seed in SEEDS}
     rows = []
-    for scope in SCOPES:
+    for scope in scopes:
         for metric in METRICS:
             cpu = [cpu_scores[seed, scope][metric] for seed in SEEDS]
             cuda = [cuda_scores[seed][scope][metric] for seed in SEEDS]
             center, sd = mean(cpu), stdev(cpu)
             score = mean(cuda)
-            rows.append({'scope': scope, 'metric': metric, 'cpu_w1_mean': center, 'cpu_w1_sd': sd,
-                         'cuda_mean': score, 'cuda_sd': stdev(cuda), 'lower': center - sd,
-                         'upper': center + sd, 'pass': center - sd <= score <= center + sd})
+            row = {'scope': scope, 'metric': metric, 'cpu_w1_mean': center, 'cpu_w1_sd': sd,
+                   'cuda_mean': score, 'cuda_sd': stdev(cuda), 'lower': center - sd,
+                   'upper': center + sd, 'pass': center - sd <= score <= center + sd}
+            if w4_scores:
+                reference = w4_scores[scope, metric]
+                row.update(w4_mean=reference, w6_minus_w4_mean=score - reference)
+            rows.append(row)
     write_json(output / 'scores-by-seed.json', cuda_scores)
     with (output / 'mean-sd.csv').open('w', encoding='utf-8', newline='') as stream:
         writer = csv.DictWriter(stream, fieldnames=rows[0].keys())
@@ -381,7 +405,10 @@ def benchmark_lock(path):
 
 
 def run(args):
-    output = args.output.resolve()
+    is_w6 = args.workers == TRIAL_WORKERS
+    output = (args.output or (W6_TRIAL_DIR if is_w6 else ACCEPTANCE_DIR)).resolve()
+    if is_w6 and output == ACCEPTANCE_DIR.resolve():
+        raise ValueError('Use a separate --output directory for the W=6 trial.')
     image, signature = existing_image()
     gpu = gpu_query('name,memory.total')
     if 'GTX 1650' not in gpu or gpu.rsplit(',', 1)[-1].strip() != '4096':
@@ -396,6 +423,13 @@ def run(args):
             raise FileNotFoundError(path)
     identity = {'image': image, 'image_signature': signature, 'gpu': gpu,
                 'power': power, 'videos': {scene: hash_file(path) for scene, path in videos.items()}}
+    w4 = None
+    if is_w6:
+        reference_path = ACCEPTANCE_DIR / 'acceptance.json'
+        w4 = read_json(reference_path)
+        if w4['status'] != 'PASS' or w4['best_workers'] != 4 or w4['inputs'] != identity:
+            raise ValueError('The W=6 trial needs an accepted W=4 report for the same image, videos and power settings.')
+        identity.update(trial_workers=TRIAL_WORKERS, reference_sha256=hash_file(reference_path))
     output.mkdir(parents=True, exist_ok=True)
     with benchmark_lock(output / 'benchmark.lock'):
         manifest = output / 'inputs.json'
@@ -411,34 +445,48 @@ def run(args):
                   'thresholds': {'track_delta_pct': args.max_track_delta_pct, 'descriptor_l2_pct': args.max_l2_pct,
                                  'vram_mib_exclusive': VRAM_LIMIT_MIB, 'ram_bytes_exclusive': RAM_LIMIT_BYTES}}
         report['offline_tests'] = offline_tests(output)
-        runs = sweep(videos, image, output, report)
+        runs = (trial_w6(videos, image, output, report, w4['best_runs'])
+                if w4 else sweep(videos, image, output, report))
         trajectory = report['trajectory'] = {}
         quality = report['quality'] = []
         timing = report['cold_vs_b3'] = {}
+        timing_w4 = {}
+        if w4:
+            report['cold_vs_cuda_w4'] = timing_w4
         if runs:
             trajectory.update(check_trajectories(runs, references, max_track_pct=args.max_track_delta_pct,
                                                  max_l2_pct=args.max_l2_pct))
-            for scene, (_, baseline) in SCENES.items():
-                trial = runs[scene]
+            for scene, trial in runs.items():
+                baseline = SCENES[scene][1]
                 seconds = trial['wall_seconds'] if trial['status'] == 'complete' else None
                 timing[scene] = {'cpu_b3_seconds': baseline, 'cuda_seconds': seconds,
                                  'trial_status': trial['status'],
                                  'speedup': baseline / seconds if seconds else None,
                                  'pass': within_resources(trial) and trial['wall_seconds'] < baseline}
+                if w4:
+                    w4_seconds = w4['best_runs'][scene]['wall_seconds']
+                    timing_w4[scene] = {'cuda_w4_seconds': w4_seconds, 'cuda_w6_seconds': seconds,
+                                        'speedup': w4_seconds / seconds if seconds else None,
+                                        'pass': within_resources(trial) and trial['wall_seconds'] < w4_seconds}
+        speed_comparison = timing_w4 if w4 else timing
         report['gates'] = gates = {
             'npy_format_and_frames': len(trajectory) == len(SCENES) and all(row['format_pass'] for row in trajectory.values()),
             'descriptor_and_track_drift': len(trajectory) == len(SCENES) and all(row['drift_pass'] for row in trajectory.values()),
             'quality_10_seeds': None,
-            'speed_and_resources': len(timing) == len(SCENES) and all(row['pass'] for row in timing.values()),
+            'speed_and_resources': (len(speed_comparison) == len(SCENES)
+                                    and all(row['pass'] for row in speed_comparison.values())),
             'offline_regression': all(code == 0 for code in report['offline_tests'].values()),
         }
         write_json(output / 'acceptance.json', report)
-        if runs and gates['npy_format_and_frames']:
-            quality.extend(check_quality(runs, output, cpu_scores, args.scorer, args.dataset, args.quality_jobs))
-            gates['quality_10_seeds'] = all(row['pass'] for row in quality)
+        quality_runs = {scene: runs[scene] for scene, row in trajectory.items() if row['format_pass']}
+        if quality_runs and (w4 or gates['npy_format_and_frames']):
+            quality.extend(check_quality(quality_runs, output, cpu_scores, args.scorer, args.dataset,
+                                         args.quality_jobs, w4_quality=w4['quality'] if w4 else ()))
+            gates['quality_10_seeds'] = len(quality_runs) == len(SCENES) and all(row['pass'] for row in quality)
         report['status'] = 'PASS' if all(gates.values()) else 'NOT PASS'
         write_json(output / 'acceptance.json', report)
-        print(f"4A {report['status']} | {output / 'acceptance.json'}", flush=True)
+        label = 'CUDA W=6' if is_w6 else '4A'
+        print(f"{label} {report['status']} | {output / 'acceptance.json'}", flush=True)
         return 0 if report['status'] == 'PASS' else 1
 
 
@@ -448,7 +496,9 @@ def main():
     parser.add_argument('--dataset', type=Path, default=Path('D:/Solve4X'))
     parser.add_argument('--scorer', type=Path,
                         default=TEMP / 'RAVEE-optz-benchmark-runner-20261126' / 'score_ravee_optz.py')
-    parser.add_argument('--output', type=Path, default=PROJECT / 'temp' / 'idt_cuda_acceptance')
+    parser.add_argument('--output', type=Path)
+    parser.add_argument('--workers', type=int, choices=(TRIAL_WORKERS,),
+                        help='Run a separate CUDA W=6 trial against the accepted W=4 results.')
     parser.add_argument('--quality-jobs', type=int, default=2)
     parser.add_argument('--max-track-delta-pct', type=float, default=15)
     parser.add_argument('--max-l2-pct', type=float, default=10)

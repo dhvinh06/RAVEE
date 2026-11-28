@@ -21,6 +21,7 @@ import cv2
 import numpy as np
 
 from toolbox.fv_profiling import FVProfile, measure
+from toolbox.feature_extraction import fv_runtime_settings, fv_settings
 
 
 VIDEO_SUFFIXES = {'.avi', '.mp4', '.mov', '.mkv', '.wmv', '.webm', '.m4v',
@@ -394,6 +395,7 @@ def ensure_image(idt_directory, signature, rebuild=False, *, backend='cpu'):
 
 
 DEFAULT_IDT_WORKERS = 6
+MAX_IDT_WORKERS = 6
 MAX_CUDA_IDT_WORKERS = 4
 
 
@@ -403,7 +405,7 @@ def idt_worker_count(*, adopt_legacy=False, backend='cpu'):
         workers = int(os.environ.get('RAVEE_IDT_WORKERS', default))
     except ValueError:
         raise ValueError('RAVEE_IDT_WORKERS must be an integer from 1 to 6') from None
-    if not 1 <= workers <= 6:
+    if not 1 <= workers <= MAX_IDT_WORKERS:
         raise ValueError('RAVEE_IDT_WORKERS must be an integer from 1 to 6')
     if backend == 'cuda' and workers > MAX_CUDA_IDT_WORKERS:
         raise ValueError('RAVEE_IDT_BACKEND=cuda requires RAVEE_IDT_WORKERS from 1 to 4')
@@ -416,8 +418,10 @@ def extract_idt(prepared, destination, image, *, workers=None, container_log=Non
     cuda = backend == 'cuda'
     if workers is None:
         workers = 1 if cuda else DEFAULT_IDT_WORKERS
-    if cuda and not 1 <= workers <= MAX_CUDA_IDT_WORKERS:
-        raise ValueError('RAVEE_IDT_BACKEND=cuda requires RAVEE_IDT_WORKERS from 1 to 4')
+    # Explicit benchmark calls can test the container's full worker range.
+    # Application settings still go through idt_worker_count().
+    if cuda and not 1 <= workers <= MAX_IDT_WORKERS:
+        raise ValueError('CUDA IDT extraction requires 1 to 6 workers')
     command = ['docker', 'run', '--rm', '-e', 'RAVEE_RAW_ONLY=1',
                '-e', f'RAVEE_IDT_WORKERS={workers}']
     if cuda:
@@ -484,9 +488,20 @@ def idt_inputs_for(prepared, source_hash, signature, *, workers=1, backend='cpu'
 
 
 def fv_inputs_for(project, raw):
+    mode, seed, fit_samples, gmm_tol = fv_settings(
+        mode=os.environ.get('RAVEE_FV_MODE', 'optimized'),
+        fit_samples=os.environ.get('RAVEE_FV_FIT_SAMPLES', '100000'),
+        gmm_tol=os.environ.get('RAVEE_FV_GMM_TOL', '0.003'),
+    )
+    workers, posterior = fv_runtime_settings(
+        mode, workers=os.environ.get('RAVEE_FV_WORKERS', '6'),
+        posterior=os.environ.get('RAVEE_FV_POSTERIOR', 'numpy'),
+    )
     return {'trajectories': digest_file(raw),
             'code': code_signature(project / 'toolbox' / 'feature_extraction.py'),
-            'versions': package_versions('numpy', 'scikit-learn')}
+            'versions': package_versions('numpy', 'scikit-learn'),
+            'mode': mode, 'random_state': seed, 'fit_samples': fit_samples, 'gmm_tol': gmm_tol,
+            'workers': workers, 'posterior': posterior}
 
 
 def feature_case(source, case_id, prepared, features, fv_inputs):
@@ -665,6 +680,9 @@ def prepare_features(project, cache_directory, reduce_video_size, settings,
                 options['progress'] = lambda message: report(f'{message}: {source.name}')
             if 'profile' in parameters:
                 options['profile'] = profile
+            for option in ('mode', 'random_state', 'fit_samples', 'gmm_tol', 'workers', 'posterior'):
+                if option in parameters:
+                    options[option] = fv_inputs[option]
             with tempfile.TemporaryDirectory(prefix='fv-work-', dir=cache.root) as work:
                 with measure(profile, 'extraction_total'):
                     return {'features': extract_framewise_features(str(raw), work, **options)}
