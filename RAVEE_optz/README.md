@@ -39,12 +39,10 @@ The process model uses the confirmed task-level XES, without opening a viewer.
 | `tests/` | Offline/mock regression suite and application import check |
 | `docs/CLEANUP_INVENTORY.md` | Cleanup decisions, preserved candidates and IDT changes |
 
-The root `test_clip_roi.py`, `test_timesformer.py`, `test_videomae.py`,
-`test_gemini_labels_retry.py` and `test_label_suggester_v2.py` are opt-in experiment
-scripts, not offline regression tests. Some load models, inspect videos or call
-Gemini. The script named `test_label_suggester_v2.py` calls the current V3 module;
-its filename remains unchanged for CLI compatibility. `make_contact_sheet.py`
-creates the demo illustration only when run explicitly.
+The root `test_gemini_labels_retry.py` and `test_label_suggester_v2.py` are
+opt-in experiments outside the offline regression suite. The latter calls
+the current V3 module. `make_contact_sheet.py` creates the demo illustration
+when run explicitly.
 
 ## Setup
 

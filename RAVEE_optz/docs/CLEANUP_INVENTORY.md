@@ -34,8 +34,7 @@ even an extra README or ignore rule inside IDT can invalidate reuse.
 | --- | --- |
 | `label_suggester_v1.py.bak`, `gui/gui_elements.py.bak` | Historical source backups with uncertain rollback value. |
 | `integrate_label_suggester.py` | Historical migration utility; may still support old installations. |
-| `test_clip_roi.py`, `test_timesformer.py`, `test_videomae.py`, `test_gemini_labels_retry.py`, `test_label_suggester_v2.py` | Opt-in experiments, some with model/API/video work. Moving or deleting them could break CLI paths or lose useful experiments. The V2-named script imports the current suggester. |
-| `clip_results.txt` | Useful experiment output, not demonstrably disposable. |
+| `test_gemini_labels_retry.py`, `test_label_suggester_v2.py` | Opt-in label-suggestion experiments. The V2-named script imports the current suggester. |
 | `README.txt`, `Supplementary_Material.md`, supplementary PDFs, `demo_RAVEE/` | Historical documentation, attribution and research/demo material. |
 | Tracked `.idea/` files | Existing personal IDE configuration; ignored for new additions, not removed. |
 | `temp/`, `IDT/features/`, `IDT/data/`, `video_input/`, `finch/input/`, `finch/output/`, `DemoFiles/`, `EventLog_Output/` | Expensive caches, raw trajectories, input/reduced media, trained/encoded artifacts, original segment data, illustrations and reviewed exports. |

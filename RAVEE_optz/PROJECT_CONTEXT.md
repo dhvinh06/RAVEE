@@ -114,9 +114,9 @@ RAVEE/
 ├── README.md / Install.md / Supplementary_Material.md / README.txt / LICENSE
 ├── requirements-twelvelabs.txt               # Khai báo dependency tùy chọn: twelvelabs==1.3.8
 ├── .env / .gitignore / .gitmodules / .gitattributes / .codex/config.toml
-├── test_clip_roi.py / test_timesformer.py / test_videomae.py / test_gemini_labels_retry.py / test_label_suggester_v2.py
+├── test_gemini_labels_retry.py / test_label_suggester_v2.py
 │                                             # Các script thử nghiệm độc lập (opt-in, KHÔNG thuộc bộ regression offline)
-├── integrate_label_suggester.py / make_contact_sheet.py / label_suggester_v1.py.bak / clip_results.txt
+├── integrate_label_suggester.py / make_contact_sheet.py / label_suggester_v1.py.bak
 ├── Supplementary_Material_EVAL2_and_4.pdf / Supplementary_Material_SLR.pdf
 └── [.venv/, .git/, .idea/, __pycache__/]     # Thư mục môi trường/hệ thống bị bỏ qua
 ```
@@ -142,7 +142,7 @@ RAVEE/
 | **AI Provider (Mặc định)** | `google-genai` | `3.3.0` | Gọi Gemini `client.models.generate_content` (structured JSON schema); mặc định `gemini-3.5-flash-lite`, hỗ trợ profile `gemini-4-hydrogen` |
 | **AI Provider (Tùy chọn)** | `twelvelabs` | `1.3.8` (`requirements-twelvelabs.txt`) | Gọi TwelveLabs Pegasus (`pegasus1.6`) qua `assets.create` + `client.analyze` |
 | **Cấu hình & Trực quan** | `python-dotenv`, `matplotlib` | `1.2.4`, `3.11.2` | Đọc `.env` (hot-reload mỗi lần bấm AI), vẽ biểu đồ hỗ trợ FINCH |
-| **Nghiên cứu (Tùy chọn)** | `torch`, `transformers`, `pynndescent` | `2.15.0+cu134`, `5.22.2`, *(chưa cài)* | Dùng riêng cho script thử nghiệm CLIP/TimeSformer/VideoMAE; `pynndescent` chỉ cần khi FINCH > 70.000 frame |
+| **FINCH (Tùy chọn)** | `pynndescent` | *(chưa cài)* | Tìm láng giềng xấp xỉ khi FINCH xử lý hơn 70.000 frame |
 
 ### 3.3. Hệ thống con Docker IDT (`IDT/`)
 - **Base image**: `ubuntu:20.04`
@@ -284,7 +284,7 @@ flowchart TD
 | Nhóm / File | Vai trò |
 | --- | --- |
 | `tests/` (18 module test + `offline_support.py` + `benchmark_fv_descriptors.py`) | Bộ hồi quy **hoàn toàn offline** (`python -B -m unittest discover -s tests -t . -v`), cô lập `.env`, chặn gọi API/Docker/Graphviz thật và chặn ghi vào cache/output production. Bao phủ toàn bộ: cache pipeline, preprocessing, Fisher Vector, video selector, Label V3, Hydrogen, Suggest All, Semantic Aggregation, API reliability, Quota Recovery, TwelveLabs, GUI lifecycle, preview/accuracy và CSV/XES serialization. |
-| `test_clip_roi.py`, `test_timesformer.py`, `test_videomae.py`, `test_gemini_labels_retry.py`, `test_label_suggester_v2.py` | Các script thử nghiệm độc lập (opt-in ở thư mục gốc) dùng cho đánh giá thủ công model/segment thật; **không** chạy qua root test discovery. |
+| `test_gemini_labels_retry.py`, `test_label_suggester_v2.py` | Các script opt-in ở thư mục gốc dùng để kiểm thử gợi ý nhãn ngoài bộ hồi quy offline. |
 | `integrate_label_suggester.py`, `make_contact_sheet.py` | Tiện ích di trú lịch sử (V2) và tạo ảnh minh họa demo (chỉ chạy khi gọi trực tiếp). |
 
 ---
