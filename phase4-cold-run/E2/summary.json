@@ -1,0 +1,25 @@
+{
+  "scene01": {
+    "seconds": 393,
+    "raw_ari": 0.12754587321330124,
+    "oracle_ari": 0.38599265675656647,
+    "oracle_accuracy": 0.6361323155216285,
+    "oracle_correct_seconds": 250,
+    "segments": 20
+  },
+  "scene02": {
+    "seconds": 221,
+    "raw_ari": 0.31474931442278,
+    "oracle_ari": 0.5484683931142492,
+    "oracle_accuracy": 0.7104072398190046,
+    "oracle_correct_seconds": 157,
+    "segments": 11
+  },
+  "combined": {
+    "seconds": 614,
+    "raw_ari": 0.19825428453159075,
+    "oracle_ari": 0.45951705835970263,
+    "oracle_accuracy": 0.6628664495114006,
+    "oracle_correct_seconds": 407
+  }
+}

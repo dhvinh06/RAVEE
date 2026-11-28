@@ -1,0 +1,112 @@
+D:\Project 2026 java\RAVEE\RAVEE_optz\finch\finch.py:13: UserWarning: pynndescent not installed: No module named 'pynndescent'
+  warnings.warn('pynndescent not installed: {}'.format(e))
+START cuda scene01 W=6 seed=0 | C:\Users\vinhh\AppData\Local\Temp\ravee-phase4-e2-cuda\scene01
+
+--- Preprocessing ---
+2154815.0 
+:Starting Update
+Preprocessing: 21.438s (ok)
+
+--- IDT (Docker) ---
+IDT (Docker): 465.282s (ok)
+
+--- Fisher Vector ---
+Descriptor Shape: (424015, 426)
+Warning: FV derived from np.zeros - if done to often clustering is random
+Fisher Vector: 59.198s (ok)
+
+--- TW-FINCH ---
+Partition 0: 1865 clusters
+Partition 1: 563 clusters
+Partition 2: 157 clusters
+Partition 3: 39 clusters
+Partition 4: 9 clusters
+Partition 5: 4 clusters
+TW-FINCH: 1.311s (ok)
+POWER scene01 before={'timestamp': '2026-11-28T10:01:42+07:00', 'ac': 1, 'power_scheme': 'Power Scheme GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c  (High performance)'} after={'timestamp': '2026-11-28T10:11:01+07:00', 'ac': 1, 'power_scheme': 'Power Scheme GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c  (High performance)'}
+Profile: C:\Users\vinhh\AppData\Local\Temp\ravee-phase4-e2-cuda\scene01\profile.csv
+D:\Project 2026 java\RAVEE\RAVEE_optz\finch\finch.py:13: UserWarning: pynndescent not installed: No module named 'pynndescent'
+  warnings.warn('pynndescent not installed: {}'.format(e))
+START cuda scene02 W=6 seed=0 | C:\Users\vinhh\AppData\Local\Temp\ravee-phase4-e2-cuda\scene02
+
+--- Preprocessing ---
+2133615.0 
+:Starting Update
+Preprocessing: 12.316s (ok)
+
+--- IDT (Docker) ---
+IDT (Docker): 251.117s (ok)
+
+--- Fisher Vector ---
+Descriptor Shape: (166449, 426)
+Fisher Vector: 46.801s (ok)
+
+--- TW-FINCH ---
+Partition 0: 1039 clusters
+Partition 1: 306 clusters
+Partition 2: 86 clusters
+Partition 3: 27 clusters
+Partition 4: 9 clusters
+Partition 5: 2 clusters
+TW-FINCH: 0.349s (ok)
+POWER scene02 before={'timestamp': '2026-11-28T10:11:05+07:00', 'ac': 1, 'power_scheme': 'Power Scheme GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c  (High performance)'} after={'timestamp': '2026-11-28T10:16:19+07:00', 'ac': 1, 'power_scheme': 'Power Scheme GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c  (High performance)'}
+Profile: C:\Users\vinhh\AppData\Local\Temp\ravee-phase4-e2-cuda\scene02\profile.csv
+E2 SCORED D:\Project 2026 java\RAVEE\phase4-cold-run\E2\summary.json
+E2 CLEANED 1589880693 bytes
+COOLDOWN START 2026-11-28T10:16:22.3022290+07:00
+COOLDOWN END 2026-11-28T10:19:22.3261044+07:00
+D:\Project 2026 java\RAVEE\RAVEE_optz\finch\finch.py:13: UserWarning: pynndescent not installed: No module named 'pynndescent'
+  warnings.warn('pynndescent not installed: {}'.format(e))
+START cpu scene01 W=6 seed=0 | C:\Users\vinhh\AppData\Local\Temp\ravee-phase4-e1-cpu\scene01
+
+--- Preprocessing ---
+2180015.0 
+:Starting Update
+Preprocessing: 20.054s (ok)
+
+--- IDT (Docker) ---
+IDT (Docker): 673.068s (ok)
+
+--- Fisher Vector ---
+Descriptor Shape: (442292, 426)
+Warning: FV derived from np.zeros - if done to often clustering is random
+Fisher Vector: 56.484s (ok)
+
+--- TW-FINCH ---
+Partition 0: 1820 clusters
+Partition 1: 527 clusters
+Partition 2: 150 clusters
+Partition 3: 43 clusters
+Partition 4: 12 clusters
+Partition 5: 3 clusters
+TW-FINCH: 1.106s (ok)
+POWER scene01 before={'timestamp': '2026-11-28T10:19:24+07:00', 'ac': 1, 'power_scheme': 'Power Scheme GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c  (High performance)'} after={'timestamp': '2026-11-28T10:32:01+07:00', 'ac': 1, 'power_scheme': 'Power Scheme GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c  (High performance)'}
+Profile: C:\Users\vinhh\AppData\Local\Temp\ravee-phase4-e1-cpu\scene01\profile.csv
+D:\Project 2026 java\RAVEE\RAVEE_optz\finch\finch.py:13: UserWarning: pynndescent not installed: No module named 'pynndescent'
+  warnings.warn('pynndescent not installed: {}'.format(e))
+START cpu scene02 W=6 seed=0 | C:\Users\vinhh\AppData\Local\Temp\ravee-phase4-e1-cpu\scene02
+
+--- Preprocessing ---
+694815.0 
+:Starting Update
+Preprocessing: 12.579s (ok)
+
+--- IDT (Docker) ---
+IDT (Docker): 375.787s (ok)
+
+--- Fisher Vector ---
+Descriptor Shape: (174785, 426)
+Fisher Vector: 45.420s (ok)
+
+--- TW-FINCH ---
+Partition 0: 1068 clusters
+Partition 1: 314 clusters
+Partition 2: 88 clusters
+Partition 3: 23 clusters
+Partition 4: 7 clusters
+Partition 5: 2 clusters
+TW-FINCH: 0.437s (ok)
+POWER scene02 before={'timestamp': '2026-11-28T10:32:06+07:00', 'ac': 1, 'power_scheme': 'Power Scheme GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c  (High performance)'} after={'timestamp': '2026-11-28T10:39:24+07:00', 'ac': 1, 'power_scheme': 'Power Scheme GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c  (High performance)'}
+Profile: C:\Users\vinhh\AppData\Local\Temp\ravee-phase4-e1-cpu\scene02\profile.csv
+E1 SCORED D:\Project 2026 java\RAVEE\phase4-cold-run\E1\summary.json
+E1 CLEANED 1642894913 bytes

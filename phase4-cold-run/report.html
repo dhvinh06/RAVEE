@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RAVEE · End-to-End Cold Run</title>
+<style>
+:root { color-scheme: light; color: #172229; background: #f5f7f6; font: 16px/1.5 system-ui, sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { max-width: 1136px; margin: 0 auto; padding: 40px 24px 60px; }
+h1 { font-size: clamp(1.7rem, 5vw, 2.5rem); margin: 0 0 8px; line-height: 1.15; }
+h2 { font-size: 1.25rem; margin: 0 0 14px; }
+p { margin: 0 0 14px; }
+.meta, small { color: #475851; }
+section { margin: 32px 0; }
+.stats { display: flex; flex-wrap: wrap; gap: 16px 36px; padding: 19px 0; margin-top: 18px; border-block: 1px solid #9daea7; }
+.stats div { display: grid; }
+.stats strong { font-size: 1.4rem; color: #135840; }
+.table-wrap { overflow-x: auto; border: 1px solid #aabcb4; border-radius: 8px; }
+table { width: 100%; border-collapse: collapse; background: #fff; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 11px 14px; vertical-align: top; border-bottom: 1px solid #d6dedb; }
+thead th { background: #e7eeea; }
+table small { display: block; min-width: 160px; margin-top: 3px; font-size: .78rem; }
+tbody tr:last-child > * { border-bottom: 0; }
+tbody th { white-space: nowrap; }
+tbody tr[data-main="true"] { background: #e9f4ee; }
+.caption { margin-top: 10px; font-size: .9rem; color: #475851; }
+ul { padding-left: 20px; }
+li + li { margin-top: 7px; }
+details { margin-bottom: 9px; border-top: 1px solid #c8d1cd; padding-top: 10px; }
+summary { cursor: pointer; font-weight: 600; }
+details p { margin: 8px 0; }
+code { overflow-wrap: anywhere; }
+a { color: #125642; }
+footer { font-size: .9rem; margin-top: 36px; }
+@media print { main { padding: 0; } section { break-inside: avoid; } }
+</style>
+</head>
+<body><main>
+<header>
+  <h1>RAVEE · End-to-End Cold Run</h1>
+  <p class="meta">Giai đoạn 4 · Trụ 1 · Solve4X Scene 01 và 02 · Camera 2 · 15 FPS · 8 cụm mỗi scene · Seed 0 · 28/11/2026.</p>
+  <div class="stats">
+    <div><strong>PASS</strong><small>Kết quả nghiệm thu</small></div>
+    <div><strong>3,94×</strong><small>E2 so với RAVEE_org</small></div>
+    <div><strong>14 phút 18 giây</strong><small>Tổng thời gian E2</small></div>
+  </div>
+</header>
+<section>
+  <h2>Bảng 1 · Hiệu năng End-to-End Cold Run</h2>
+  <div class="table-wrap"><table aria-label="Thời gian bốn công đoạn và tài nguyên đỉnh">
+    <thead><tr><th scope="col">Cấu hình</th><th scope="col">Scene 01 (s)</th><th scope="col">Scene 02 (s)</th><th scope="col">Tổng (s)</th><th scope="col">So với M0</th><th scope="col">RAM Docker / FV / VRAM (GiB)</th></tr></thead>
+    <tbody><tr data-main="false"><th scope="row">M0 · RAVEE_org</th><td><strong>2.334,80</strong><small>Tiền xử lý 29,65 · IDT 2.031,93 · FV 272,02 · TW-FINCH 1,20</small></td><td><strong>1.045,51</strong><small>Tiền xử lý 13,00 · IDT 895,05 · FV 137,09 · TW-FINCH 0,37</small></td><td>3.380,31</td><td>1,00×</td><td>— / — / —</td></tr><tr data-main="false"><th scope="row">M1 · RAVEE_optz RAW_ONLY</th><td><strong>1.820,33</strong><small>Tiền xử lý 33,38 · IDT 1.605,55 · FV 180,27 · TW-FINCH 1,13</small></td><td><strong>970,41</strong><small>Tiền xử lý 11,88 · IDT 862,93 · FV 95,28 · TW-FINCH 0,33</small></td><td>2.790,74</td><td>1,21×</td><td>— / 2,80 / —</td></tr><tr data-main="false"><th scope="row">E1 · CPU W=6 + FV opt</th><td><strong>750,71</strong><small>Tiền xử lý 20,05 · IDT 673,07 · FV 56,48 · TW-FINCH 1,11</small></td><td><strong>434,22</strong><small>Tiền xử lý 12,58 · IDT 375,79 · FV 45,42 · TW-FINCH 0,44</small></td><td>1.184,94</td><td>2,85×</td><td>4,68 / 1,69 / —</td></tr><tr data-main="true"><th scope="row">E2 · CUDA W=6 + FV opt</th><td><strong>547,23</strong><small>Tiền xử lý 21,44 · IDT 465,28 · FV 59,20 · TW-FINCH 1,31</small></td><td><strong>310,58</strong><small>Tiền xử lý 12,32 · IDT 251,12 · FV 46,80 · TW-FINCH 0,35</small></td><td>857,81</td><td>3,94×</td><td>5,65 / 1,63 / 2,07</td></tr></tbody>
+  </table></div>
+  <p class="caption">Thời gian là tổng wall-clock của bốn công đoạn. RAM Docker lấy từ đỉnh cgroup, RAM FV lấy mẫu working set Python mỗi 100 ms và VRAM toàn GPU lấy mẫu bằng nvidia-smi mỗi khoảng 0,5 giây. Các cột tài nguyên lấy đỉnh cao nhất của hai scene. M1 → E1 nhanh hơn 2,36×. E1 → E2 nhanh thêm 1,38×.</p>
+</section>
+<section>
+  <h2>Bảng 2 · Chất lượng phân đoạn gộp trên 614 giây</h2>
+  <div class="table-wrap"><table aria-label="Điểm seed 0 và mốc 10 seed của E1 và E2">
+    <thead><tr><th rowspan="2" scope="col">Chỉ số</th><th colspan="2" scope="colgroup">E1 · CPU W=6</th><th colspan="2" scope="colgroup">E2 · CUDA W=6</th></tr>
+    <tr><th scope="col">Seed 0</th><th scope="col">10 seed · Mean ± SD</th><th scope="col">Seed 0</th><th scope="col">10 seed · Mean ± SD</th></tr></thead>
+    <tbody><tr><th scope="row">Raw ARI</th><td>0,2109</td><td>0,2084 ± 0,0204</td><td>0,1983</td><td>0,2039 ± 0,0268</td></tr><tr><th scope="row">Oracle ARI</th><td>0,5790</td><td>0,4912 ± 0,0603</td><td>0,4595</td><td>0,4785 ± 0,0644</td></tr><tr><th scope="row">Oracle Accuracy</th><td>75,24%</td><td>70,67% ± 4,02 đpt</td><td>66,29%</td><td>68,99% ± 4,53 đpt</td></tr><tr><th scope="row">Số giây đúng / 614</th><td>462 / 614</td><td>433,90 ± 24,68</td><td>407 / 614</td><td>423,60 ± 27,81</td></tr></tbody>
+  </table></div>
+  <p class="caption">SD là độ lệch chuẩn mẫu. Số giây đúng của mốc 10 seed được tính từ Oracle Accuracy × 614. Đối chiếu tái lập dùng mốc seed 0. FV SHA-256 khớp 4/4. Số cụm từng cấp TW-FINCH khớp 4/4. E1 khớp 9/9 điểm seed 0 đã lưu. Mốc CUDA Bước 2 trích được gồm thống kê 10 seed, SHA-256 và số cụm từng cấp.</p>
+</section>
+<section>
+  <h2>Điều kiện nghiệm thu</h2>
+  <ul><li><strong>Đạt.</strong> Đủ bốn công đoạn ở cả bốn lượt.</li><li><strong>Đạt.</strong> AC=1 và High performance ở đầu và cuối từng scene.</li><li><strong>Đạt.</strong> Nghỉ 180,02 giây giữa E2 và E1.</li><li><strong>Đạt.</strong> Docker RAM < 6,5 GiB, FV RAM < 2,5 GiB, CUDA VRAM < 3,5 GiB.</li><li><strong>Đạt.</strong> E2 đạt 3,94× so với ngưỡng 3,0×.</li><li><strong>Đạt.</strong> Tái lập chất lượng seed 0 của Giai đoạn 3.</li></ul>
+  <p>Đã dọn 3,23 GB file trung gian sau khi chấm và lưu kết quả.</p>
+</section>
+<section>
+  <h2>Tài nguyên, nguồn điện và SHA-256 từng scene</h2>
+  <details><summary>E2 · Scene 01 · FV khớp SHA-256</summary>
+    <p>RAM Docker / FV / VRAM (GiB) · 5,65 / 1,63 / 2,07. Dữ liệu sinh ra 1.109,39 MB. GPU đỉnh 51 °C · 975 mẫu.</p>
+    <p>Nguồn 10:01:42 → 10:11:01 · AC 1 → 1. Trajectory khớp SHA-256.</p>
+    <p>FV mới <code>a1302d5e03288f9f5f605fb643740198bc9dab143f5b251d3245c8eaaf4d851b</code><br>FV Giai đoạn 3 <code>a1302d5e03288f9f5f605fb643740198bc9dab143f5b251d3245c8eaaf4d851b</code></p>
+  </details><details><summary>E2 · Scene 02 · FV khớp SHA-256</summary>
+    <p>RAM Docker / FV / VRAM (GiB) · 3,50 / 0,74 / 2,07. Dữ liệu sinh ra 480,70 MB. GPU đỉnh 51 °C · 547 mẫu.</p>
+    <p>Nguồn 10:11:05 → 10:16:19 · AC 1 → 1. Trajectory khớp SHA-256.</p>
+    <p>FV mới <code>0ccc65df5a04c06882ee3309ae53610eeb4c5297bc293ff3427f4800c5a0014c</code><br>FV Giai đoạn 3 <code>0ccc65df5a04c06882ee3309ae53610eeb4c5297bc293ff3427f4800c5a0014c</code></p>
+  </details><details><summary>E1 · Scene 01 · FV khớp SHA-256</summary>
+    <p>RAM Docker / FV / VRAM (GiB) · 4,68 / 1,69 / —. Dữ liệu sinh ra 1.145,79 MB.</p>
+    <p>Nguồn 10:19:24 → 10:32:01 · AC 1 → 1. Trajectory khớp SHA-256.</p>
+    <p>FV mới <code>6d26b9742bb226d7cbf45225e904395fa162c7aae451fa9d1e6e3e1c1db29538</code><br>FV Giai đoạn 3 <code>6d26b9742bb226d7cbf45225e904395fa162c7aae451fa9d1e6e3e1c1db29538</code></p>
+  </details><details><summary>E1 · Scene 02 · FV khớp SHA-256</summary>
+    <p>RAM Docker / FV / VRAM (GiB) · 2,48 / 0,77 / —. Dữ liệu sinh ra 497,30 MB.</p>
+    <p>Nguồn 10:32:06 → 10:39:24 · AC 1 → 1. Trajectory khớp SHA-256.</p>
+    <p>FV mới <code>682aecc7de2a12b6df4b2be8b90be89a46924551e3ace2b01fb34e63f11f36bd</code><br>FV Giai đoạn 3 <code>682aecc7de2a12b6df4b2be8b90be89a46924551e3ace2b01fb34e63f11f36bd</code></p>
+  </details>
+</section>
+<footer>
+  <p>Thời gian M0/M1 lấy từ benchmark Solve4X ngày 26/11/2026. Mốc E1 10 seed dùng FV3 CPU W=6. Mốc E2 10 seed dùng FV Bước 2 CUDA W=6. <a href="baseline_timings.csv">Thời gian M0/M1</a> · <a href="phase3_reference.json">Mốc Giai đoạn 3</a></p>
+  <p><a href="ablation_performance.csv">Bảng 1 CSV</a> · <a href="ablation_quality.csv">Bảng 2 CSV</a> · <a href="summary.json">Số đo đầy đủ</a> · <a href="preflight.json">Pre-flight</a> · <a href="run.log">Log chạy</a></p>
+</footer>
+</main></body></html>

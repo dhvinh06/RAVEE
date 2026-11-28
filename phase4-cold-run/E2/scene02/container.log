@@ -1,0 +1,33 @@
+IDT timing stage=stage_input wall_s=0.689681
+IDT timing stage=decode_video wall_s=6.630501
+IDT timing stage=write_gray_mmap wall_s=0.657458
+Running: 1_scene02_cam2_15fps_reduced.avi with 6 IDT workers, 3311 frames
+IDT CUDA optical flow: uploads=551 raw_pairs=550 warped_pairs=550
+IDT timing stage=chunk wall_s=222.230687 start=0 end=551 load_start=0 tracks=28214 tracking_s=222.189738 cpu_s=216.917097
+IDT CUDA optical flow: uploads=582 raw_pairs=581 warped_pairs=581
+IDT CUDA optical flow: uploads=582 raw_pairs=581 warped_pairs=581
+IDT CUDA optical flow: uploads=582 raw_pairs=581 warped_pairs=581
+IDT timing stage=chunk wall_s=233.091118 start=1655 end=2207 load_start=1625 tracks=28105 tracking_s=233.050773 cpu_s=227.798490
+IDT timing stage=chunk wall_s=233.183894 start=551 end=1103 load_start=521 tracks=12883 tracking_s=233.172260 cpu_s=227.878452
+IDT timing stage=chunk wall_s=233.954631 start=2759 end=3311 load_start=2729 tracks=32791 tracking_s=233.913519 cpu_s=228.642028
+IDT CUDA optical flow: uploads=582 raw_pairs=581 warped_pairs=581
+IDT CUDA optical flow: uploads=582 raw_pairs=581 warped_pairs=581
+IDT timing stage=chunk wall_s=236.266405 start=1103 end=1655 load_start=1073 tracks=38392 tracking_s=236.217643 cpu_s=230.905874
+IDT timing stage=chunk wall_s=236.917499 start=2207 end=2759 load_start=2177 tracks=26064 tracking_s=236.895221 cpu_s=231.613303
+/densetrack/run_idt.py:269: FutureWarning: Passing (type, 1) or '1type' as a synonym of type is deprecated; in a future version of numpy, it will be understood as (type, (1,)) / '(1,)type'.
+  tracks = densetrack.densetrack(video[load_start:end], adjust_camera=True)
+/densetrack/run_idt.py:269: FutureWarning: Passing (type, 1) or '1type' as a synonym of type is deprecated; in a future version of numpy, it will be understood as (type, (1,)) / '(1,)type'.
+  tracks = densetrack.densetrack(video[load_start:end], adjust_camera=True)
+/densetrack/run_idt.py:269: FutureWarning: Passing (type, 1) or '1type' as a synonym of type is deprecated; in a future version of numpy, it will be understood as (type, (1,)) / '(1,)type'.
+  tracks = densetrack.densetrack(video[load_start:end], adjust_camera=True)
+/densetrack/run_idt.py:269: FutureWarning: Passing (type, 1) or '1type' as a synonym of type is deprecated; in a future version of numpy, it will be understood as (type, (1,)) / '(1,)type'.
+  tracks = densetrack.densetrack(video[load_start:end], adjust_camera=True)
+/densetrack/run_idt.py:269: FutureWarning: Passing (type, 1) or '1type' as a synonym of type is deprecated; in a future version of numpy, it will be understood as (type, (1,)) / '(1,)type'.
+  tracks = densetrack.densetrack(video[load_start:end], adjust_camera=True)
+/densetrack/run_idt.py:269: FutureWarning: Passing (type, 1) or '1type' as a synonym of type is deprecated; in a future version of numpy, it will be understood as (type, (1,)) / '(1,)type'.
+  tracks = densetrack.densetrack(video[load_start:end], adjust_camera=True)
+IDT timing stage=chunk_pool wall_s=237.503930
+IDT timing stage=merge_tracks wall_s=2.424225
+IDT timing stage=publish_tracks wall_s=1.222060
+Completed 1_scene02_cam2_15fps_reduced.avi
+IDT container peak memory bytes: 3753259008

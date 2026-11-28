@@ -1,0 +1,36 @@
+{
+  "dataset": "D:/Solve4X",
+  "input_videos": {
+    "scene01": {"filename": "scene01_cam2_15fps.mp4", "bytes": 71334799, "fps": 15, "frames": 5883},
+    "scene02": {"filename": "scene02_cam2_15fps.mp4", "bytes": 34837393, "fps": 15, "frames": 3311}
+  },
+  "python": "3.14.0",
+  "opencv": "5.0.0",
+  "numpy": "2.5.4",
+  "scikit_learn": "1.9.1",
+  "gpu": {"name": "NVIDIA GeForce GTX 1650", "memory_mib": 4096, "driver": "617.14", "docker_gpu_smoke_passed": true},
+  "images_found": {
+    "idt-orig:latest": "29ca4309af9c",
+    "idt:latest": "3ed3ce375b37",
+    "ravee-idt:2116098cbcd0f20e5695": "5c272b5074c36302d1a3f1feb931706e96bae15fd2d04a043b24607385c451af",
+    "ravee-idt:cuda": "6be12de90472ec33aef8a2ad0a2b95cfc174dd97d63ea26799042da7eea545a1"
+  },
+  "power": {"ac": 1, "scheme": "High performance", "ac_auto_sleep_seconds": 0},
+  "tests": {
+    "discover": {"run": 321, "passed": 317, "skipped": 4, "failed": 0},
+    "test_fv_acceptance": {"run": 4, "passed": 4, "failed": 0},
+    "test_idt_cuda_backend": {"run": 2, "passed": 2, "failed": 0}
+  },
+  "run_configuration": {
+    "seed": 0,
+    "clusters_per_scene": 8,
+    "idt_workers": 6,
+    "fv": {"mode": "optimized", "workers": 6, "posterior": "numpy", "fit_samples": 100000, "gmm_tol": 0.003},
+    "native_math_threads": 1
+  },
+  "notes": [
+    "The repository's benchmark_ravee_orig.py supplied Profile and scoring helpers because the TEMP copy was absent.",
+    "The application has a 4-worker CUDA limit. E2 uses the existing explicit 6-worker benchmark entry point.",
+    "The user closed the foreground IDEs, browser, and Gemini before measurement. Five idle Edge background processes remained without a foreground window."
+  ]
+}

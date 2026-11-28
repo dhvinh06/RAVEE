@@ -1,0 +1,103 @@
+{
+  "mode": "full_pipeline",
+  "source": "C:\\Users\\vinhh\\AppData\\Local\\Temp\\RAVEE-Solve4X-15fps\\scene01_cam2_15fps.mp4",
+  "status": "ok",
+  "platform": "Windows-10-10.0.19045-SP0",
+  "python": "3.14.0 (tags/v3.14.0:ebf955d, Oct  7 2025, 10:15:03) [MSC v.1944 64 bit (AMD64)]",
+  "host_logical_cores": 12,
+  "video_id": "scene01",
+  "requested_clusters": 8,
+  "implementation": "RAVEE_optz",
+  "image": "sha256:6be12de90472ec33aef8a2ad0a2b95cfc174dd97d63ea26799042da7eea545a1",
+  "backend": "cuda",
+  "idt_workers": 6,
+  "seed": 0,
+  "image_tag": "ravee-idt:cuda",
+  "image_signature": "6116bed2632b6164541330a257a12ba2fb3010a7e7d288e3bc77c92f62b8cf24",
+  "power_before": {
+    "timestamp": "2026-11-28T10:01:42+07:00",
+    "ac": 1,
+    "power_scheme": "Power Scheme GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c  (High performance)"
+  },
+  "measured_compute_s": 547.2293703999998,
+  "stages": [
+    {
+      "stage": "Preprocessing",
+      "status": "ok",
+      "counts_toward_pipeline": true,
+      "wall_s": 21.438332399999922,
+      "cpu_s": 79.703125,
+      "cpu_avg_pct_one_core": 371.7785670680257,
+      "peak_ram_bytes": 609583104,
+      "ram_scope": "host_process_sampled_rss",
+      "gpu_host_avg_pct": null,
+      "gpu_host_peak_pct": null,
+      "gpu_samples": 0,
+      "artifact_bytes": 255012442,
+      "pipeline_pct": 3.917613629606444
+    },
+    {
+      "stage": "IDT (Docker)",
+      "status": "ok",
+      "counts_toward_pipeline": true,
+      "wall_s": 465.28233950000003,
+      "cpu_s": null,
+      "cpu_avg_pct_one_core": null,
+      "peak_ram_bytes": 6069805056,
+      "ram_scope": "container_process_peak_rss",
+      "gpu_host_avg_pct": null,
+      "gpu_host_peak_pct": null,
+      "gpu_samples": 0,
+      "artifact_bytes": 844638328,
+      "pipeline_pct": 85.02510367086106
+    },
+    {
+      "stage": "Fisher Vector",
+      "status": "ok",
+      "counts_toward_pipeline": true,
+      "wall_s": 59.198040799999944,
+      "cpu_s": 75.265625,
+      "cpu_avg_pct_one_core": 127.14208778341879,
+      "peak_ram_bytes": 1750659072,
+      "ram_scope": "host_process_sampled_rss",
+      "gpu_host_avg_pct": null,
+      "gpu_host_peak_pct": null,
+      "gpu_samples": 0,
+      "artifact_bytes": 9603604,
+      "pipeline_pct": 10.81777477636642
+    },
+    {
+      "stage": "TW-FINCH",
+      "status": "ok",
+      "counts_toward_pipeline": true,
+      "wall_s": 1.3106576999998651,
+      "cpu_s": 1.3125,
+      "cpu_avg_pct_one_core": 100.14056301657824,
+      "peak_ram_bytes": 1093603328,
+      "ram_scope": "host_process_sampled_rss",
+      "gpu_host_avg_pct": null,
+      "gpu_host_peak_pct": null,
+      "gpu_samples": 0,
+      "artifact_bytes": 131103,
+      "pipeline_pct": 0.2395079231660819
+    }
+  ],
+  "docker_peak_ram_bytes": 6069805056,
+  "power_after": {
+    "timestamp": "2026-11-28T10:11:01+07:00",
+    "ac": 1,
+    "power_scheme": "Power Scheme GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c  (High performance)"
+  },
+  "four_stage_conditions_ok": true,
+  "vram_peak_mib": 2124,
+  "gpu_peak_celsius": 51,
+  "gpu_peak_utilization_percent": 40,
+  "gpu_samples": 975,
+  "gpu_errors": [],
+  "hashes": {
+    "source": "459acbd0aabe390cb2e277e2b8e4ae9fa7e0245eba03546607795a93f407e656",
+    "preprocessed": "90734ce39c21cec23bddac3dc0fb6f9e42136de97175c71c4516a682a29487b6",
+    "trajectory": "4a197edb0afda461c90e61f30e8d1f5b60ea09e46d17613ea9a4c61883869298",
+    "fv_text": "a1302d5e03288f9f5f605fb643740198bc9dab143f5b251d3245c8eaaf4d851b"
+  }
+}

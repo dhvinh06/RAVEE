@@ -1,0 +1,214 @@
+{
+  "cpu": {
+    "quality": {
+      "scene01": {
+        "raw_ari": {
+          "reference_mean": 0.1301195105492443,
+          "reference_sd": 0.03284356258955167,
+          "mean": 0.14548177010880511,
+          "sd": 0.023271545668121445,
+          "in_reference_band": true
+        },
+        "oracle_ari": {
+          "reference_mean": 0.46053990437234305,
+          "reference_sd": 0.10679269842646448,
+          "mean": 0.44213124034984014,
+          "sd": 0.09510999003894915,
+          "in_reference_band": true
+        },
+        "oracle_accuracy": {
+          "reference_mean": 0.7073791348600509,
+          "reference_sd": 0.05167615339008588,
+          "mean": 0.6852417302798982,
+          "sd": 0.05245064282227263,
+          "in_reference_band": true
+        }
+      },
+      "scene02": {
+        "raw_ari": {
+          "reference_mean": 0.30499091696354563,
+          "reference_sd": 0.08487823931717563,
+          "mean": 0.2769376789432253,
+          "sd": 0.08776031956469427,
+          "in_reference_band": true
+        },
+        "oracle_ari": {
+          "reference_mean": 0.636394597804937,
+          "reference_sd": 0.05539581647370801,
+          "mean": 0.6288229430831355,
+          "sd": 0.07211596011110645,
+          "in_reference_band": true
+        },
+        "oracle_accuracy": {
+          "reference_mean": 0.7552036199095022,
+          "reference_sd": 0.03565771638886072,
+          "mean": 0.7579185520361991,
+          "sd": 0.04495884935381259,
+          "in_reference_band": true
+        }
+      },
+      "combined": {
+        "raw_ari": {
+          "reference_mean": 0.2040175261384015,
+          "reference_sd": 0.021508927103581037,
+          "mean": 0.20698976945855815,
+          "sd": 0.022148698319614364,
+          "in_reference_band": true
+        },
+        "oracle_ari": {
+          "reference_mean": 0.5100956931354418,
+          "reference_sd": 0.05718582585033488,
+          "mean": 0.49775830541246846,
+          "sd": 0.0594065462288814,
+          "in_reference_band": true
+        },
+        "oracle_accuracy": {
+          "reference_mean": 0.7245928338762215,
+          "reference_sd": 0.027590792196820497,
+          "mean": 0.711400651465798,
+          "sd": 0.03793852278012555,
+          "in_reference_band": true
+        }
+      }
+    },
+    "performance": {
+      "scene01": {
+        "median_seconds": 57.83402584999931,
+        "mean_seconds": 57.749906759999064,
+        "min_seconds": 53.8464533999977,
+        "max_seconds": 62.667152399997576,
+        "peak_ram_bytes": 1810649088,
+        "ram_pass": true,
+        "fixed_model_cosine": 0.9999999999999998,
+        "fixed_model_pass": true,
+        "seeded_rerun_cosine": 0.49441205866450766,
+        "seeded_rerun_pass": false
+      },
+      "scene02": {
+        "median_seconds": 40.2888872500007,
+        "mean_seconds": 40.796252209998784,
+        "min_seconds": 38.40924670000095,
+        "max_seconds": 47.238651599996956,
+        "peak_ram_bytes": 820322304,
+        "ram_pass": true,
+        "fixed_model_cosine": 0.9999999999999998,
+        "fixed_model_pass": true,
+        "seeded_rerun_cosine": 0.9999999999999998,
+        "seeded_rerun_pass": true
+      }
+    },
+    "checks": {
+      "fixed_model_pass": true,
+      "seeded_rerun_pass": false,
+      "quality_pass": true,
+      "ram_pass": true,
+      "median_time_pass": false
+    }
+  },
+  "cuda": {
+    "quality": {
+      "scene01": {
+        "raw_ari": {
+          "reference_mean": 0.13234151033274177,
+          "reference_sd": 0.02610469004029107,
+          "mean": 0.14356115754901608,
+          "sd": 0.03821384334800946,
+          "in_reference_band": true
+        },
+        "oracle_ari": {
+          "reference_mean": 0.35984555899649595,
+          "reference_sd": 0.08356455825512368,
+          "mean": 0.39863020929040804,
+          "sd": 0.12748539166684475,
+          "in_reference_band": true
+        },
+        "oracle_accuracy": {
+          "reference_mean": 0.6315521628498728,
+          "reference_sd": 0.05611826463955307,
+          "mean": 0.6356234096692112,
+          "sd": 0.08517988802314652,
+          "in_reference_band": true
+        }
+      },
+      "scene02": {
+        "raw_ari": {
+          "reference_mean": 0.30887747565524604,
+          "reference_sd": 0.07145413191558542,
+          "mean": 0.32277503330855617,
+          "sd": 0.09879633157939668,
+          "in_reference_band": true
+        },
+        "oracle_ari": {
+          "reference_mean": 0.6489534734552619,
+          "reference_sd": 0.07109063147888586,
+          "mean": 0.6354723536500725,
+          "sd": 0.09755301285158675,
+          "in_reference_band": true
+        },
+        "oracle_accuracy": {
+          "reference_mean": 0.7633484162895927,
+          "reference_sd": 0.04683251846504517,
+          "mean": 0.7506787330316742,
+          "sd": 0.06467933230926906,
+          "in_reference_band": true
+        }
+      },
+      "combined": {
+        "raw_ari": {
+          "reference_mean": 0.2049908198802369,
+          "reference_sd": 0.017167576975623773,
+          "mean": 0.21451789888114753,
+          "sd": 0.027077372402243078,
+          "in_reference_band": true
+        },
+        "oracle_ari": {
+          "reference_mean": 0.4481735231582638,
+          "reference_sd": 0.0540520358627384,
+          "mean": 0.47060356836703776,
+          "sd": 0.09829150451265717,
+          "in_reference_band": true
+        },
+        "oracle_accuracy": {
+          "reference_mean": 0.6789902280130293,
+          "reference_sd": 0.03787359978257245,
+          "mean": 0.6770358306188925,
+          "sd": 0.06802824131026186,
+          "in_reference_band": true
+        }
+      }
+    },
+    "performance": {
+      "scene01": {
+        "median_seconds": 55.655204050002794,
+        "mean_seconds": 57.18887043000141,
+        "min_seconds": 51.951350600000296,
+        "max_seconds": 64.46311830000195,
+        "peak_ram_bytes": 1742843904,
+        "ram_pass": true,
+        "fixed_model_cosine": 0.9999999999999998,
+        "fixed_model_pass": true,
+        "seeded_rerun_cosine": 0.9999999999999998,
+        "seeded_rerun_pass": true
+      },
+      "scene02": {
+        "median_seconds": 38.07380185000147,
+        "mean_seconds": 39.27893265000021,
+        "min_seconds": 35.69251780000195,
+        "max_seconds": 45.475584799998614,
+        "peak_ram_bytes": 789540864,
+        "ram_pass": true,
+        "fixed_model_cosine": 0.9999999999999998,
+        "fixed_model_pass": true,
+        "seeded_rerun_cosine": 0.7638715289704837,
+        "seeded_rerun_pass": false
+      }
+    },
+    "checks": {
+      "fixed_model_pass": true,
+      "seeded_rerun_pass": false,
+      "quality_pass": true,
+      "ram_pass": true,
+      "median_time_pass": false
+    }
+  }
+}

@@ -1,0 +1,5 @@
+stage,status,counts_toward_pipeline,wall_s,cpu_s,cpu_avg_pct_one_core,peak_ram_bytes,ram_scope,gpu_host_avg_pct,gpu_host_peak_pct,gpu_samples,artifact_bytes,pipeline_pct
+Preprocessing,ok,True,21.438332399999922,79.703125,371.7785670680257,609583104,host_process_sampled_rss,,,0,255012442,3.917613629606444
+IDT (Docker),ok,True,465.28233950000003,,,6069805056,container_process_peak_rss,,,0,844638328,85.02510367086106
+Fisher Vector,ok,True,59.198040799999944,75.265625,127.14208778341879,1750659072,host_process_sampled_rss,,,0,9603604,10.81777477636642
+TW-FINCH,ok,True,1.3106576999998651,1.3125,100.14056301657824,1093603328,host_process_sampled_rss,,,0,131103,0.2395079231660819
