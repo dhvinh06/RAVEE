@@ -134,7 +134,7 @@ class PipelineTests(unittest.TestCase):
         (self.root / 'IDT/data/person01_boxing_d1_uncomp.avi').write_bytes(b'sample source')
         self.reducer = Mock(side_effect=self.reduce)
         self.extractor = Mock(side_effect=lambda raw, work: np.ones((84, 2)))
-        self.idt = Mock(side_effect=lambda prepared, destination, image: save_tracks(destination))
+        self.idt = Mock(side_effect=lambda prepared, destination, image, **options: save_tracks(destination))
         self.image = Mock(return_value='mock-image')
         self.info = {'frames': 100, 'fps': 15, 'width': 640, 'height': 480}
         for target, value in (('video_info', Mock(return_value=self.info)),
@@ -218,13 +218,13 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(self.extractor.call_count, 2)
 
     def test_partial_idt_is_not_cached(self):
-        def partial(prepared, destination, image):
+        def partial(prepared, destination, image, **options):
             destination.write_bytes(b'partial npy')
             raise subprocess.CalledProcessError(1, 'mock-docker')
         self.idt.side_effect = partial
         with self.assertRaises(subprocess.CalledProcessError):
             self.prepare(allow_idt=True)
-        self.idt.side_effect = lambda prepared, destination, image: save_tracks(destination)
+        self.idt.side_effect = lambda prepared, destination, image, **options: save_tracks(destination)
         self.prepare(allow_idt=True)
         self.reducer.assert_called_once()
         self.assertEqual(self.idt.call_count, 2)

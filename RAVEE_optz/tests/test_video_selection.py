@@ -1,6 +1,7 @@
 """Offline startup/selection/cache tests; no Tk desktop, Docker, models or API calls."""
 
 import json
+import os
 from pathlib import Path
 import runpy
 import shutil
@@ -54,6 +55,14 @@ class SelectedVideoCacheTests(unittest.TestCase):
         self.assertEqual(len(selected), 1)
         self.assertEqual(calls, (self.reducer.call_count, self.idt.call_count, self.extractor.call_count))
         self.assertEqual(self.status()['status'], 'Cached')
+
+    def test_cuda_default_runs_six_workers_and_is_visible_to_cache_inspection(self):
+        with patch.dict(os.environ, {'RAVEE_IDT_BACKEND': 'cuda'}, clear=True):
+            store, cases = self.prepare(videos=[self.source], allow_idt=True)
+            self.cluster(store, cases)
+            self.assertEqual(self.idt.call_args.kwargs, {'workers': 6, 'backend': 'cuda'})
+            self.assertEqual(self.image.call_args.kwargs, {'backend': 'cuda'})
+            self.assertEqual(self.status()['status'], 'Cached')
 
     def test_full_warm_cache_and_readonly_status_reuse_all_four_stages(self):
         store, cases = self.prepare(videos=[self.source], allow_idt=True)

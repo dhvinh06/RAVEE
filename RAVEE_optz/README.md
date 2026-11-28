@@ -104,11 +104,13 @@ existing granularity, labeling and semantic review GUIs open on the main thread.
 Docker must be installed/running if extraction is actually needed. Closing an idle
 selector exits; a running job must finish or fail before the window can close.
 
-New IDT extractions use six workers with equal frame ranges and a 30-frame
-overlap on each interior boundary. Set `RAVEE_IDT_WORKERS=1` to use sequential
-extraction. The worker count is part of the raw IDT cache identity. Explicit
-legacy trajectory adoption uses the sequential configuration when no worker
-override is set.
+New CPU and CUDA IDT extractions use six workers with equal frame ranges and
+a 30-frame overlap on each interior boundary. CPU is the default backend.
+To select CUDA in the GUI or CLI, set `$env:RAVEE_IDT_BACKEND = 'cuda'` in
+PowerShell before starting the app. Set `RAVEE_IDT_WORKERS` to a value from
+1 to 6 to override the worker count. The backend and worker count are part
+of the raw IDT cache identity. Explicit CPU legacy trajectory adoption uses
+one worker by default.
 
 ### CLI without the startup selector
 

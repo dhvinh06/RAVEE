@@ -396,19 +396,16 @@ def ensure_image(idt_directory, signature, rebuild=False, *, backend='cpu'):
 
 DEFAULT_IDT_WORKERS = 6
 MAX_IDT_WORKERS = 6
-MAX_CUDA_IDT_WORKERS = 4
 
 
 def idt_worker_count(*, adopt_legacy=False, backend='cpu'):
-    default = 1 if adopt_legacy or backend == 'cuda' else DEFAULT_IDT_WORKERS
+    default = 1 if adopt_legacy and backend == 'cpu' else DEFAULT_IDT_WORKERS
     try:
         workers = int(os.environ.get('RAVEE_IDT_WORKERS', default))
     except ValueError:
         raise ValueError('RAVEE_IDT_WORKERS must be an integer from 1 to 6') from None
     if not 1 <= workers <= MAX_IDT_WORKERS:
         raise ValueError('RAVEE_IDT_WORKERS must be an integer from 1 to 6')
-    if backend == 'cuda' and workers > MAX_CUDA_IDT_WORKERS:
-        raise ValueError('RAVEE_IDT_BACKEND=cuda requires RAVEE_IDT_WORKERS from 1 to 4')
     return workers
 
 
@@ -417,9 +414,7 @@ def extract_idt(prepared, destination, image, *, workers=None, container_log=Non
     """Mount only this job's input; baked-in or old data cannot enter the run."""
     cuda = backend == 'cuda'
     if workers is None:
-        workers = 1 if cuda else DEFAULT_IDT_WORKERS
-    # Explicit benchmark calls can test the container's full worker range.
-    # Application settings still go through idt_worker_count().
+        workers = DEFAULT_IDT_WORKERS
     if cuda and not 1 <= workers <= MAX_IDT_WORKERS:
         raise ValueError('CUDA IDT extraction requires 1 to 6 workers')
     command = ['docker', 'run', '--rm', '-e', 'RAVEE_RAW_ONLY=1',
@@ -649,12 +644,7 @@ def prepare_features(project, cache_directory, reduce_video_size, settings,
                 report('Preparing Docker image for missing IDT extraction')
                 image = ensure_image(idt, signature, rebuild, backend=backend)
             report(f'Extracting IDT trajectories: {source.name}')
-            if workers == DEFAULT_IDT_WORKERS:
-                extract_idt(prepared, destination, image)
-            elif backend == 'cpu':
-                extract_idt(prepared, destination, image, workers=workers)
-            else:
-                extract_idt(prepared, destination, image, workers=workers, backend=backend)
+            extract_idt(prepared, destination, image, workers=workers, backend=backend)
 
         report(f'Verifying IDT cache: {source.name}')
         raw = cache.file('idt', idt_inputs, f'{prepared.stem}-trajectory.npy', trajectories,

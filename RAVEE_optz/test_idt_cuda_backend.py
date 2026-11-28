@@ -13,11 +13,15 @@ class IDTCUDABackendTests(unittest.TestCase):
         with patch.dict(os.environ, {}, clear=True):
             self.assertEqual(cache.idt_backend(), 'cpu')
             self.assertEqual(cache.idt_worker_count(adopt_legacy=True), 1)
-            self.assertEqual(cache.idt_worker_count(backend='cuda'), 1)
-        for backend, workers in [('cpu', 6), ('cuda', 1), ('cuda', 4), ('cuda', 6)]:
-            with self.subTest(backend=backend, workers=workers), patch.dict(os.environ, {
-                'RAVEE_IDT_BACKEND': backend, 'RAVEE_IDT_WORKERS': str(workers),
-            }), tempfile.TemporaryDirectory() as directory:
+            self.assertEqual(cache.idt_worker_count(backend='cuda'), 6)
+        for backend, override, workers in [('cpu', None, 6), ('cuda', None, 6),
+                                            ('cuda', 1, 1), ('cuda', 4, 4), ('cuda', 6, 6)]:
+            settings = {'RAVEE_IDT_BACKEND': backend}
+            if override is not None:
+                settings['RAVEE_IDT_WORKERS'] = str(override)
+            with self.subTest(backend=backend, override=override), patch.dict(
+                os.environ, settings, clear=True
+            ), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 prepared = root / 'scene.avi'
                 prepared.touch()
@@ -28,12 +32,7 @@ class IDTCUDABackendTests(unittest.TestCase):
 
                 with patch.object(cache.subprocess, 'run', side_effect=docker) as run:
                     selected = cache.idt_backend()
-                    if (selected, workers) == ('cuda', 6):
-                        with self.assertRaisesRegex(ValueError, '1 to 4'):
-                            cache.idt_worker_count(backend=selected)
-                        count = workers  # Explicit benchmark request.
-                    else:
-                        count = cache.idt_worker_count(backend=selected)
+                    count = cache.idt_worker_count(backend=selected)
                     cache.extract_idt(prepared, root / 'output.npy', 'image',
                                       backend=selected, workers=count)
                 argv = run.call_args.args[0]
@@ -44,8 +43,8 @@ class IDTCUDABackendTests(unittest.TestCase):
                     self.assertIn('--memory=6g', argv)
                 else:
                     self.assertNotIn('--gpus', argv)
-        with patch.dict(os.environ, {'RAVEE_IDT_BACKEND': 'cuda', 'RAVEE_IDT_WORKERS': '5'}):
-            with self.assertRaisesRegex(ValueError, '1 to 4'):
+        with patch.dict(os.environ, {'RAVEE_IDT_BACKEND': 'cuda', 'RAVEE_IDT_WORKERS': '7'}):
+            with self.assertRaisesRegex(ValueError, '1 to 6'):
                 cache.idt_worker_count(backend=cache.idt_backend())
 
     def test_cuda_image_and_fingerprint_are_separate(self):
